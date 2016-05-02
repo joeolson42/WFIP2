@@ -4384,7 +4384,7 @@ print *, 'TSO before calling SNOWTEMP: ', tso
 
          xsn=(rhosn*(snwe-rsm)+1.e3*rsm)/                            &
              snwe
-         rhosn=MAX(50.,(MIN(XSN,400.))
+         rhosn=MIN(MAX(50.,XSN),400.)
 
         RHOCSN=2090.* RHOSN
         thdifsn = 0.265/RHOCSN
@@ -5540,7 +5540,7 @@ print *, 'SNOWTEMP: SNHEI,SNTH,SOILT1: ',SNHEI,SNTH,SOILT1,soilt
 !*** Eq. 9 (with my correction) in Koren et al. (1999)
           xsn=(rhosn*(snwe-rsm)+1.e3*rsm)/                            &
               snwe
-          rhosn=max(50.,MIN(XSN,400.))
+          rhosn=MIN(MAX(50.,XSN),400.)
 
           RHOCSN=2090.* RHOSN
           thdifsn = 0.265/RHOCSN
