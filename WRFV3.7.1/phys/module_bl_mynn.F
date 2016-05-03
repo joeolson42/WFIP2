@@ -4560,7 +4560,7 @@ ENDIF
   s_awv=0.
   s_awqke=0.
 
-  DO k=KTS,KTE+1
+  DO k=KTS,KTE
      DO I=1,NUP
        s_aw(k)   = s_aw(K)    + UPA(K,I)*UPW(K,I)*Psig_w * (1.0+rstoch_col(k))
        s_awthl(k)= s_awthl(K) + UPA(K,i)*UPW(K,I)*UPTHL(K,I)*Psig_w * (1.0+rstoch_col(k))

@@ -884,14 +884,14 @@ state   real   FM             ij     misc        1         -     -         "FM" 
 state   real   FH             ij     misc        1         -     -         "FH"                  "INTEGRATED FUNCTION FOR HEAT"         ""
 i1      real   WSPD           ij     misc        1         -     -         "WSPD"                "Wind speed"                           "m s-1"
 i1      real   GZ1OZ0         ij     misc        1         -     -         "GZ1OZ0"              "LOG OF Z1 over Z0"                     ""
-i1      real   BR             ij     misc        1         -     rh        "BR"                  "Bulk Richardson"                       ""
+state   real   BR             ij     misc        1         -     rh        "BR"                  "Bulk Richardson"                       ""
 state   real   ZOL            ij     misc        1         -     rh        "ZOL"                 "z/L"                                   ""
 
 # ysupbl variables for grims shallow convection
 state   real   WSTAR_YSU      ij     misc        1         -     -        "WSTAR_YSU"           "mixed-layer velocity scale from ysupbl" "m/s"
 state   real   DELTA_YSU      ij     misc        1         -     -        "DELTA_YSU"           "entrainment layer depth from ysupbl"    "m"
 
-# MYJ PBL variables; GBM PBL: EXCH_H, EXCH_M
+# MYJ PBL variables; GBM & MYNN PBL: EXCH_H, EXCH_M
 state    real   EXCH_H          ikj     misc        1         Z     rh         "EXCH_H"               "SCALAR EXCHANGE COEFFICIENTS "
 state    real   EXCH_M          ikj     misc        1         Z     rh         "EXCH_M"               "EXCHANGE COEFFICIENTS "
 state    real  CT              ij      misc        1         -      r        "CT"                    "COUNTERGRADIENT TERM"    "K"
@@ -1833,6 +1833,8 @@ state    real    NUMCOLPTS        ij     misc        1         -     -          
 state    real    GRPL_COLINT      ij     misc        1         -     -           "GRPL_COLINT"    "COL INT GRAUPEL"         "kg m-2"
 state    real    HAIL_MAXK1       ij     misc        1         -      rh02       "HAIL_MAXK1"     "MAX HAIL DIAMETER K=1"   "m"
 state    real    HAIL_MAX2D       ij     misc        1         -      rh02       "HAIL_MAX2D"     "MAX HAIL DIAMETER ENTIRE COLUMN"   "m"
+state    real    UH16             ij     misc        1         -      irh        "UH16"           "UPDRAFT HELICITY16"      "m2 s-2"
+state    real    UP_HELI_MAX16    ij     misc        1         -      irh        "UP_HELI_MAX16"  "MAX UPDRAFT HELICITY16"  "m2 s-2"
 #
 state    real    MAXCLDFRA        ij     misc        1         -     irh         "MAXCLDFRA"      "MAX CLOUD FRACTION"       "0 to 1"
 state    real    SHEAR100         ij     misc        1         -     irh         "SHEAR100"       "WSP(100 m) - WSP(k=1)"    "m s-1"
@@ -1999,6 +2001,7 @@ rconfig   integer num_metgrid_soil_levels namelist,domains	1             4      
 rconfig   real    p_top_requested         namelist,domains      1              5000    irh    "p_top_requested" "Pa"      ""
 rconfig   logical interp_theta            namelist,domains	1              .false. irh    "interp_theta"  "inside real, vertically interpolate theta (T) or temperature (F)"  ""
 rconfig   integer interp_type             namelist,domains	1              2       irh    "interp_type"  "1=interp in pressure, 2=interp in LOG pressure"  ""
+rconfig   integer rebalance               namelist,domains      1              0       irh    "rebalance"  "0=no; 1=yes, always; 2=yes, but only when doing vertical nesting"
 rconfig   integer vert_refine_method      namelist,domains      max_domains    0       irh    "vert_refine_method"  "0=no vertical nesting, 1=integer refinement, 2=native WRF" ""
 rconfig   integer vert_refine_fact        namelist,domains      1              1       irh    "vertical refinment factor for ndown or for vertical nesting in a concurrent run"  "" ""
 rconfig   integer extrap_type             namelist,domains	1              2       irh    "extrap_type"  "1= use 2 lowest levels, 2=constant"  ""
@@ -2030,6 +2033,7 @@ rconfig   real    qv_max_value            namelist,domains      1              3
 rconfig   real    qv_min_p_safe           namelist,domains      1              110000  irh    "qv_min_p_safe" "Threshhold pressure, Qv < flag set to value"      "Pa"
 rconfig   real    qv_min_flag             namelist,domains      1              1.E-6   irh    "qv_min_flag" "Qv flag for min"  "kg kg{-1}"
 rconfig   real    qv_min_value            namelist,domains      1              1.E-6   irh    "qv_min_value" "Qv value for min"  "kg kg{-1}"
+rconfig   integer ideal_init_method       namelist,domains      1              1       irh    "ideal_init_method" "inside start_em: 1=alb from phb, 2=alb from t_init" " "
 rconfig   real    dx                      namelist,domains     max_domains    200     h     "dx"        "X HORIZONTAL RESOLUTION"   "METERS"
 rconfig   real    dy                      namelist,domains   	max_domains    200     h     "dy"        "Y HORIZONTAL RESOLUTION"   "METERS"
 rconfig   integer grid_id                 namelist,domains	max_domains    1       irh    "id"            ""      ""
@@ -2779,7 +2783,7 @@ package   wenopd_scalar  moist_adv_opt==4            -             -
 #package   maxmin_output  output_diagnostics==1            -    state:t2min,t2max,tt2min,tt2max,t2mean,t2std,q2min,q2max,tq2min,tq2max,q2mean,q2std,skintempmin,skintempmax,tskintempmin,tskintempmax,skintempmean,skintempstd,u10max,v10max,spduv10max,tspduv10max,u10mean,v10mean,spduv10mean,u10std,v10std,spduv10std,raincvmax,rainncvmax,traincvmax,trainncvmax,raincvmean,rainncvmean,raincvstd,rainncvstd
 package   maxmin_output  output_diagnostics==1            -    state:t2min,t2max,tt2min,tt2max,t2mean,t2std,q2min,q2max,tq2min,tq2max,q2mean,q2std,skintempmin,skintempmax,tskintempmin,tskintempmax,skintempmean,skintempstd,u10max,v10max,spduv10max,tspduv10max,u10mean,v10mean,spduv10mean,u10std,v10std,spduv10std,raincvmax,rainncvmax,traincvmax,trainncvmax,raincvmean,rainncvmean,raincvstd,rainncvstd,swradmin,swradmax,tswradmin,tswradmax,swradmean,swradstd
 
-package   nwp_output     nwp_diagnostics==1            -       state:wspd10max,w_up_max,w_dn_max,up_heli_max,w_mean,grpl_max,hail_maxk1,hail_max2d
+package   nwp_output     nwp_diagnostics==1            -       state:wspd10max,w_up_max,w_dn_max,refd_max,up_heli_max,up_heli_max16,w_mean,grpl_max,ltg1_max,ltg2_max,ltg3_max,nci_ltg,nca_ltg,nci_w,nca_w,nci_wq,nca_wq,nci_refd,nca_refd,qr_max_ci,qg_max_ci,uh,uh16
 
 package   dfi_setup      dfi_stage==0                -             -
 package   dfi_bck        dfi_stage==1                -             -
