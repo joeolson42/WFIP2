@@ -441,8 +441,8 @@ BENCH_START(surf_driver_tim)
           HYDRO_dt = -1
       endif
 
-      CALL surface_driver(grid%rand_perturb,grid%RAND_PERT,grid%field_sf,                   &
-     &        grid%rand_perturb3,grid%RAND_PERT3,& !grid%field_pbl,                &
+      CALL surface_driver(grid%spp_lsm,grid%pattern_spp_lsm,grid%field_sf,                   &
+     &        grid%spp_pbl,grid%pattern_spp_pbl,& !grid%field_pbl,                &
      &        HYDRO_dt=HYDRO_dt,  sfcheadrt=grid%sfcheadrt,               &
      &        INFXSRT=grid%INFXSRT,  soldrain=grid%soldrain,              &
      &         ACGRDFLX=grid%acgrdflx  ,ACHFX=grid%achfx        ,ACLHF=grid%aclhf        &
@@ -840,7 +840,7 @@ BENCH_END(surf_driver_tim)
 
       CALL wrf_debug ( 200 , ' call pbl_driver' )
 BENCH_START(pbl_driver_tim)
-      CALL pbl_driver(grid%rand_perturb3,grid%RAND_PERT3,                           &
+      CALL pbl_driver(grid%spp_pbl,grid%pattern_spp_pbl,                           &
      &         AKHS=grid%akhs          ,AKMS=grid%akms                              &
      &        ,BL_PBL_PHYSICS=config_flags%bl_pbl_physics                           &
      &        ,WINDFARM_OPT=config_flags%windfarm_opt,power=grid%power              &
@@ -1170,8 +1170,8 @@ BENCH_START(cu_driver_tim)
      &             ,ZNU=grid%znu                                          &
      &             ,MP_PHYSICS=config_flags%mp_physics                    &
      &             ,GD_CLOUD=grid%GD_CLOUD,GD_CLOUD2=grid%GD_CLOUD2       &
-     &             ,rand_perturb2=config_flags%rand_perturb2              &
-     &             ,RAND_PERT2=grid%RAND_PERT2,field_conv=grid%field_conv &
+     &             ,spp_conv=config_flags%spp_conv              &
+     &             ,pattern_spp_conv=grid%pattern_spp_conv,field_conv=grid%field_conv &
 #if (WRF_CHEM == 1)
      &             ,CHEM_OPT=config_flags%chem_opt                             & !CuP, rce 22-aug-2011 !BSINGH - For WRFCuP scheme
 #endif

@@ -6,10 +6,10 @@ MODULE module_sf_ruclsm
 ! Notes for perturbations of soil properties (Judith Berner)
 ! Perturbations are applied in subroutine soilprob to array hydro;
 ! soilprop is called from subroutine SFCTMP which is called from subroutine LSMRUC;
-! subroutine LSMRUC had two new 3D fields: RAND_PERT (in) and field_sf(inout);
+! subroutine LSMRUC had two new 3D fields: pattern_spp_lsm (in) and field_sf(inout);
 !    their vertical dimension is number of atmospheric levels (kms:kme) - (suboptimal, but easiest hack)
 !    field_sf is used to pass perturbed fields of hydrop up to model (and output) driver;
-! in argument list to SFCTMP the arrays are passed as RAND_PERT(i,1:nzs,j), and exist henceforth as
+! in argument list to SFCTMP the arrays are passed as pattern_spp_lsm(i,1:nzs,j), and exist henceforth as
 ! column arrays;
 ! in the subroutines below SFCTMP (SNOW and SNOWSOIL) the fields are called rstochcol,fieldcol_sf
 ! to reflect their dimension rstochcol (1:nzs)
@@ -48,7 +48,7 @@ MODULE module_sf_ruclsm
 CONTAINS
 
 !-----------------------------------------------------------------
-    SUBROUTINE LSMRUC(rand_perturb,RAND_PERT,field_sf,           &
+    SUBROUTINE LSMRUC(spp_lsm,pattern_spp_lsm,field_sf,           &
                    DT,KTAU,NSL,                                  &
 #if (EM_CORE==1)
                    lakemodel,lakemask,                           &
@@ -158,14 +158,14 @@ CONTAINS
 
    REAL,       INTENT(IN   )    ::     DT
    LOGICAL,    INTENT(IN   )    ::     myj,frpcpn
-   INTEGER,    INTENT(IN   ),OPTIONAL    ::     rand_perturb
+   INTEGER,    INTENT(IN   ),OPTIONAL    ::     spp_lsm
    INTEGER,    INTENT(IN   )    ::     NLCAT, NSCAT, mosaic_lu, mosaic_soil
    INTEGER,    INTENT(IN   )    ::     ktau, nsl, isice, iswater, &
                                        ims,ime, jms,jme, kms,kme, &
                                        ids,ide, jds,jde, kds,kde, &
                                        its,ite, jts,jte, kts,kte
 
-   REAL,    DIMENSION( ims:ime, kms:kme, jms:jme ),OPTIONAL::    RAND_PERT
+   REAL,    DIMENSION( ims:ime, kms:kme, jms:jme ),OPTIONAL::    pattern_spp_lsm
    REAL,    DIMENSION( ims:ime, kms:kme, jms:jme ),OPTIONAL::    field_sf
 
    REAL,    DIMENSION( ims:ime, kms:kme, jms:jme )            , &
@@ -394,8 +394,8 @@ CONTAINS
      do J=jts,jte
         do i=its,ite
            do k=1,nsl
-       if (rand_perturb==1) then
-           rstoch(i,k,j) = RAND_PERT(i,k,j)
+       if (spp_lsm==1) then
+           rstoch(i,k,j) = pattern_spp_lsm(i,k,j)
        else
            rstoch(i,k,j)=0.0
        endif  
@@ -906,7 +906,7 @@ CONTAINS
 
         canwatold(i,j) = canwatr
 !-----------------------------------------------------------------
-         CALL SFCTMP (rand_perturb,                              & 
+         CALL SFCTMP (spp_lsm,                              & 
                 rstoch(i,1:nzs,j),field_sf(i,1:nzs,j),  & 
                 dt,ktau,conflx,i,j,                              &
 !--- input variables
@@ -1159,7 +1159,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
 
 
-   SUBROUTINE SFCTMP (rand_perturb,rstochcol,fieldcol_sf,        &
+   SUBROUTINE SFCTMP (spp_lsm,rstochcol,fieldcol_sf,        &
                 delt,ktau,conflx,i,j,                            &
 !--- input variables
                 nzs,nddzs,nroot,meltfactor,                      &
@@ -1360,7 +1360,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
    REAL,  INTENT(INOUT)                     ::              RSM, &  
                                                       SNWEPRINT, &
                                                      SNHEIPRINT
-   INTEGER,   INTENT(IN)                    ::     rand_perturb     
+   INTEGER,   INTENT(IN)                    ::     spp_lsm     
 !--- Local variables
 
    INTEGER ::  K,ILNB
@@ -1742,7 +1742,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
           runoff2s=0.
 
            dripnosn=drip*(1.-snowfrac)
-         CALL SOIL(rand_perturb,rstochcol,fieldcol_sf,          &
+         CALL SOIL(spp_lsm,rstochcol,fieldcol_sf,          &
 !--- input variables
             i,j,iland,isoil,delt,ktau,conflx,nzs,nddzs,nroot,   &
             PRCPMS,RAINF,PATM,QVATM,QCATM,GLW,GSWnew,           &
@@ -1858,7 +1858,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
               dripsn = drip
               snfr=snowfrac
            endif
-         CALL SNOWSOIL (rand_perturb,rstochcol,fieldcol_sf,     & !--- input variables
+         CALL SNOWSOIL (spp_lsm,rstochcol,fieldcol_sf,     & !--- input variables
             i,j,isoil,delt,ktau,conflx,nzs,nddzs,nroot,         &
             meltfactor,rhonewsn,SNHEI_CRIT,                     &  ! new
             ILAND,PRCPMS,RAINF,NEWSN,snhei,SNWE,snfr,           &
@@ -2067,7 +2067,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
        if(SEAICE .LT. 0.5) then
 !  LAND
-         CALL SOIL(rand_perturb,rstochcol,fieldcol_sf,          &
+         CALL SOIL(spp_lsm,rstochcol,fieldcol_sf,          &
 !--- input variables
             i,j,iland,isoil,delt,ktau,conflx,nzs,nddzs,nroot,   &
             PRCPMS,RAINF,PATM,QVATM,QCATM,GLW,GSWnew,           &
@@ -2161,7 +2161,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !------------------------------------------------------------------------
 
 
-        SUBROUTINE SOIL (rand_perturb,rstochcol, fieldcol_sf,&
+        SUBROUTINE SOIL (spp_lsm,rstochcol, fieldcol_sf,&
 !--- input variables
             i,j,iland,isoil,delt,ktau,conflx,nzs,nddzs,nroot,&
             PRCPMS,RAINF,PATM,QVATM,QCATM,                   &
@@ -2335,7 +2335,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
                                                           SOILT
 
 !-------- 1-d variables
-   INTEGER                   , INTENT(IN)  ::      rand_perturb   
+   INTEGER                   , INTENT(IN)  ::      spp_lsm   
    REAL,     DIMENSION(1:NZS), INTENT(OUT)  ::          SOILICE, &
                                                         SOILIQW
 
@@ -2475,7 +2475,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 ! SOILPROP computes thermal diffusivity, and diffusional and
 !          hydraulic condeuctivities
 !******************************************************************
-          CALL SOILPROP(rand_perturb,rstochcol,fieldcol_sf,       &
+          CALL SOILPROP(spp_lsm,rstochcol,fieldcol_sf,       &
 !--- input variables
                nzs,fwsat,lwsat,tav,keepfr,                        &
                soilmois,soiliqw,soilice,                          &
@@ -3038,7 +3038,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
 
 
-        SUBROUTINE SNOWSOIL (rand_perturb,rstochcol,fieldcol_sf,&
+        SUBROUTINE SNOWSOIL (spp_lsm,rstochcol,fieldcol_sf,&
 !--- input variables
              i,j,isoil,delt,ktau,conflx,nzs,nddzs,nroot,       &
              meltfactor,rhonewsn,SNHEI_CRIT,                   & ! new
@@ -3255,7 +3255,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
    REAL,     INTENT(OUT)                    ::              RSM, &
                                                       SNWEPRINT, &
                                                      SNHEIPRINT
-   INTEGER,  INTENT(IN)                    ::       rand_perturb 
+   INTEGER,  INTENT(IN)                    ::       spp_lsm 
 !--- Local variables
 
 
@@ -3438,7 +3438,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 ! SOILPROP computes thermal diffusivity, and diffusional and
 !          hydraulic condeuctivities
 !******************************************************************
-          CALL SOILPROP(rand_perturb,rstochcol,fieldcol_sf,      &
+          CALL SOILPROP(spp_lsm,rstochcol,fieldcol_sf,      &
 !--- input variables
                nzs,fwsat,lwsat,tav,keepfr,                       &
                soilmois,soiliqw,soilice,                         &
@@ -6043,7 +6043,7 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
 !-------------------------------------------------------------------
 
 
-          SUBROUTINE SOILPROP(rand_perturb,rstochcol,fieldcol_sf, &
+          SUBROUTINE SOILPROP(spp_lsm,rstochcol,fieldcol_sf, &
 !--- input variables
          nzs,fwsat,lwsat,tav,keepfr,                              &
          soilmois,soiliqw,soilice,                                &
@@ -6105,7 +6105,7 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
 
    REAL,     DIMENSION(1:NZS), INTENT(IN)  ::          rstochcol
    REAL,     DIMENSION(1:NZS), INTENT(INOUT) ::      fieldcol_sf
-   INTEGER,  INTENT(IN   )   ::                     rand_perturb      
+   INTEGER,  INTENT(IN   )   ::                     spp_lsm      
 
 
 !--- output variables
@@ -6251,7 +6251,7 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
        ENDDO
 
 !        perturb hydrolic conductivity by 10-30%, not more than 50%
-         if (rand_perturb==1) then 
+         if (spp_lsm==1) then 
          DO K=1,NZS !lala
             fieldcol_sf(k)=hydro(k)*rstochcol(k)
             hydro(k)=hydro(k)*(1+rstochcol(k))

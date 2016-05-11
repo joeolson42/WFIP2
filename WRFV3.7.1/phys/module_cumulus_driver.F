@@ -79,7 +79,7 @@ CONTAINS
                      ,ishallow,cugd_tten,cugd_qvten,cugd_qcten        &
                      ,cugd_ttens,cugd_qvtens                          &
                      ,gd_cloud,gd_cloud2                              &
-                     ,rand_perturb2,RAND_PERT2,field_conv             &
+                     ,spp_conv,pattern_spp_conv,field_conv             &
                  ! Optional output arguments for CAMZM scheme
                      ,cape, zmmu, zmmd, zmdt, zmdq, dlf, rliq         &
                      ,pconvb, pconvt                                  &
@@ -630,8 +630,8 @@ CONTAINS
 
 !beka
      REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL :: &
-           RAND_PERT2,field_conv
-     INTEGER, OPTIONAL :: rand_perturb2
+           pattern_spp_conv,field_conv
+     INTEGER, OPTIONAL :: spp_conv
 
 #if ( WRF_DFI_RADAR == 1 )
 !
@@ -1147,7 +1147,7 @@ CONTAINS
             ENDDO
          endif
 #endif
-          CALL GFDRV(rand_perturb2,RAND_PERT2,field_conv,       &
+          CALL GFDRV(spp_conv,pattern_spp_conv,field_conv,       &
                 DT=dt, ITIMESTEP=itimestep, DX=dx               &
                ,U=u,V=v,T=t,W=w ,RHO=rho                        &
                ,P=p,PI=pi,Q=qv_curr,RAINCV=raincv               &

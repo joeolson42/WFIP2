@@ -5,7 +5,7 @@ MODULE module_pbl_driver
 CONTAINS
 
 !------------------------------------------------------------------
-   SUBROUTINE pbl_driver(rand_perturb3,RAND_PERT3,                 &                                          
+   SUBROUTINE pbl_driver(spp_pbl,pattern_spp_pbl,                 &                                          
                   itimestep,dt,u_frame,v_frame                     &
                  ,bldt,curr_secs,adapt_step_flag                   &
                  ,bldtacttime                                      & 
@@ -565,7 +565,7 @@ CONTAINS
                INTENT(IN)    :: XICE, SNOW, LH
 
 ! Random perturbations
-   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL ::RAND_PERT3
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL ::pattern_spp_pbl
 
 ! Bep changes: variable added for urban
    real, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) ::FRC_URB2D   ! URBAN Landuse fraction
@@ -647,7 +647,7 @@ CONTAINS
                INTENT(IN)    ::                           mut
 !
    INTEGER,    OPTIONAL, INTENT(IN)    ::               gwd_opt
-   INTEGER,    INTENT(IN)              ::             rand_perturb3
+   INTEGER,    INTENT(IN)              ::             spp_pbl
    REAL,       OPTIONAL, INTENT(IN)    ::               p_top
 !
   real,   dimension( ims:ime, kms:kme, jms:jme )                             , &
@@ -1582,7 +1582,7 @@ CONTAINS
                  initflag=0
               ENDIF
               
-              CALL  mynn_bl_driver(rand_perturb3,RAND_PERT3,             &
+              CALL  mynn_bl_driver(spp_pbl,pattern_spp_pbl,             &
                    &initflag=initflag,&
                    &grav_settling=grav_settling,&
                    &delt=dtbl,dz=dz8w,dx=dx,znt=znt,                     &

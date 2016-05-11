@@ -326,7 +326,7 @@ CONTAINS
 !     # As to dtl, ...gh, see subroutine mym_turbulence.
 !
 !-------------------------------------------------------------------
-  SUBROUTINE  mym_initialize (rand_perturb3,rstoch_col, & 
+  SUBROUTINE  mym_initialize (spp_pbl,rstoch_col, & 
        &            kts,kte,&
        &            dz, zw,  &
        &            u, v, thl, qw, &
@@ -359,7 +359,7 @@ CONTAINS
     REAL, DIMENSION(kts:kte) :: theta
 
     REAL, DIMENSION(kts:kte) :: rstoch_col
-    INTEGER ::rand_perturb3
+    INTEGER ::spp_pbl
 
 !   **  At first ql, vt and vq are set to zero.  **
     DO k = kts,kte
@@ -400,7 +400,7 @@ CONTAINS
 !
     DO l = 1,lmax
 !
-       CALL mym_length ( rand_perturb3,rstoch_col, &
+       CALL mym_length ( spp_pbl,rstoch_col, &
             &            kts,kte,&
             &            dz, zw, &
             &            rmo, flt, flq, &
@@ -602,7 +602,7 @@ CONTAINS
 !     NOTE: the mixing lengths are meant to be calculated at the full-
 !           sigmal levels (or interfaces beween the model layers).
 !
-  SUBROUTINE  mym_length (rand_perturb3,rstoch_col,& 
+  SUBROUTINE  mym_length (spp_pbl,rstoch_col,& 
     &            kts,kte,&
     &            dz, zw, &
     &            rmo, flt, flq, &
@@ -661,7 +661,7 @@ CONTAINS
     REAL :: afk,abk,zwk,zwk1,dzk,qdz,vflx,bv,tau_cloud,elb,elb_cloud,els,els1,elf, &
             & el_stab,el_unstab,el_mf,el_stab_mf,elb_mf
 
-    INTEGER, INTENT(IN)   :: rand_perturb3
+    INTEGER, INTENT(IN)   :: spp_pbl
     REAL, DIMENSION(kts:kte), INTENT(in)   :: rstoch_col
 
     IF ( bl_mynn_mixlength .EQ. 0 ) THEN
@@ -885,7 +885,7 @@ CONTAINS
        END IF
 
 !      Stochastic perturbations of turbulent mixing length
-       if (rand_perturb3==1) then
+       if (spp_pbl==1) then
           if (k.lt.25) then
              el(k)= el(k) + el(k)* rstoch_col(k) * MAX(exp(-MAX(zwk-3000.,0.0)/2000.),0.01)
           endif
@@ -1256,7 +1256,7 @@ CONTAINS
 !     # dtl, dqw, dtv, gm and gh are allowed to share storage units with
 !       dfm, dfh, dfq, tcd and qcd, respectively, for saving memory.
 !
-  SUBROUTINE  mym_turbulence (rand_perturb3,rstoch_col,& 
+  SUBROUTINE  mym_turbulence (spp_pbl,rstoch_col,& 
     &            kts,kte,&
     &            levflag, &
     &            dz, zw, &
@@ -1315,7 +1315,7 @@ CONTAINS
     DOUBLE PRECISION  e1, e2, e3, e4, enum, eden, wden
 
 !   Stochastic
-    INTEGER,  INTENT(IN)                          ::    rand_perturb3
+    INTEGER,  INTENT(IN)                          ::    spp_pbl
     REAL, DIMENSION(KTS:KTE)                      ::    rstoch_col
 
 
@@ -1338,7 +1338,7 @@ CONTAINS
     &            ql, vt, vq, &
     &            dtl, dqw, dtv, gm, gh, sm, sh )
 !
-    CALL mym_length (rand_perturb3,rstoch_col, &
+    CALL mym_length (spp_pbl,rstoch_col, &
     &            kts,kte, &
     &            dz, zw, &
     &            rmo, flt, flq, &
@@ -3181,7 +3181,7 @@ ENDIF
   END SUBROUTINE tridiag
 
 ! ==================================================================
-  SUBROUTINE mynn_bl_driver(rand_perturb3,RAND_PERT3, &
+  SUBROUTINE mynn_bl_driver(spp_pbl,pattern_spp_pbl, &
        &initflag,grav_settling,         &
        &delt,dz,dx,znt,                 &
        &u,v,w,th,qv,qc,qi,qni,qnc,      &
@@ -3339,8 +3339,8 @@ ENDIF
     INTEGER, SAVE :: levflag
 
 ! Stochastic fields 
-     INTEGER,  INTENT(IN),OPTIONAL                                      ::rand_perturb3
-     REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN),OPTIONAL  ::RAND_PERT3
+     INTEGER,  INTENT(IN),OPTIONAL                                      ::spp_pbl
+     REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN),OPTIONAL  ::pattern_spp_pbl
      REAL, DIMENSION(KTS:KTE)                         ::    rstoch_col
 
 
@@ -3436,8 +3436,8 @@ ENDIF
                 tsq1(k)=tsq(i,k,j)
                 qsq1(k)=qsq(i,k,j)
                 cov1(k)=cov(i,k,j)
-                if (rand_perturb3==1) then
-                    rstoch_col(k)=RAND_PERT3(i,k,j)
+                if (spp_pbl==1) then
+                    rstoch_col(k)=pattern_spp_pbl(i,k,j)
                 else
                     rstoch_col(k)=0.0
                 endif
@@ -3465,7 +3465,7 @@ ENDIF
                 Psig_shcu(i,j)=1.0
              ENDIF
 
-             CALL mym_initialize (rand_perturb3,rstoch_col, & 
+             CALL mym_initialize (spp_pbl,rstoch_col, & 
                   &kts,kte,    &
                   &dz1, zw, u1, v1, thl, sqv,  &
                   &PBLH(i,j), th1, sh,         &
@@ -3573,8 +3573,8 @@ ENDIF
              tsq1(k)=tsq(i,k,j)
              qsq1(k)=qsq(i,k,j)
              cov1(k)=cov(i,k,j)
-             if (rand_perturb3==1) then
-                rstoch_col(k)=RAND_PERT3(i,k,j)
+             if (spp_pbl==1) then
+                rstoch_col(k)=pattern_spp_pbl(i,k,j)
              else
                 rstoch_col(k)=0.0
              endif
@@ -3682,7 +3682,7 @@ ENDIF
 
           IF (bl_mynn_edmf == 1) THEN
             !PRINT*,"Calling StEM Mass-Flux: i= ",i," j=",j
-            CALL StEM_mf(rand_perturb3,rstoch_col,&
+            CALL StEM_mf(spp_pbl,rstoch_col,&
                &kts,kte,delt,zw,p1,               &
                &bl_mynn_edmf_mom,                 &
                &bl_mynn_edmf_tke,                 &
@@ -3705,7 +3705,7 @@ ENDIF
             )
 
           ELSEIF (bl_mynn_edmf == 2) THEN
-            CALL temf_mf(rand_perturb3,rstoch_col,&
+            CALL temf_mf(spp_pbl,rstoch_col,&
                &kts,kte,delt,zw,p1,ex1,           &
                &u1,v1,w1,th1,thl,thetav,          &
                &sqw,sqv,sqc,qke1,                 &
@@ -3738,7 +3738,7 @@ ENDIF
                &edmf_qc1,                        &
                &Vt, Vq)
 
-          CALL mym_turbulence (rand_perturb3,rstoch_col,& 
+          CALL mym_turbulence (spp_pbl,rstoch_col,& 
                &kts,kte,levflag, &
                &dz1, zw, u1, v1, thl, sqc, sqw,  &
                &qke1, tsq1, qsq1, cov1,          &
@@ -3916,7 +3916,7 @@ ENDIF
                qc_bl(i,k,j)=qc_bl1D(k) !*Psig_shcu(i,j)
                cldfra_bl(i,k,j)=cldfra_bl1D(k) !*Psig_shcu(i,j)
              ! Stochastic perturbations to cldfra_bl and qc_bl
-               if (rand_perturb3==1) then
+               if (spp_pbl==1) then
                    cldfra_bl(i,k,j)= cldfra_bl(i,k,j)*(1.0-rstoch_col(k))
                   IF ((cldfra_bl(i,k,j) > 1.0) .or. (cldfra_bl(i,k,j) < 0.0)) then
                      cldfra_bl(i,k,j)=MAX(MIN(cldfra_bl(i,k,j),1.0),0.0)
@@ -4213,7 +4213,7 @@ ENDIF
 !  4) some extra limits for numerical stability
 ! This scheme remains under development, so consider it experimental code. 
 !
-  SUBROUTINE StEM_mf(rand_perturb3,rstoch_col,&
+  SUBROUTINE StEM_mf(spp_pbl,rstoch_col,&
                  & kts,kte,dt,zw,p,         &
                  & momentum_opt,            &
                  & tke_opt,                 &
@@ -4238,7 +4238,7 @@ ENDIF
                  &Psig_shcu) 
 
 ! Stochastic  
-     INTEGER,  INTENT(IN),OPTIONAL ::rand_perturb3
+     INTEGER,  INTENT(IN),OPTIONAL ::spp_pbl
      REAL, DIMENSION(KTS:KTE)      ::    rstoch_col
   ! inputs:
      INTEGER, INTENT(IN) :: KTS,KTE,momentum_opt,tke_opt
@@ -5166,18 +5166,20 @@ SUBROUTINE SCALE_AWARE(dx,PBL1,Psig_bl,Psig_shcu)
     Psig_bl=1.0
     Psig_shcu=1.0
     dxdh=MAX(dx,10.)/MIN(PBL1,3000.)
-    ! Honnert et al. 2011, TKE in PBL
-    Psig_bl= ((dxdh**2) + 0.07*(dxdh**0.667))/((dxdh**2) + &
-             (3./21.)*(dxdh**0.67) + (3./42.))
+    ! Honnert et al. 2011, TKE in PBL  *** original form used until 201605
+    !Psig_bl= ((dxdh**2) + 0.07*(dxdh**0.667))/((dxdh**2) + &
+    !         (3./21.)*(dxdh**0.67) + (3./42.))
     ! Honnert et al. 2011, TKE in entrainment layer
     !Psig_bl= ((dxdh**2) + (4./21.)*(dxdh**0.667))/((dxdh**2) + &
      !        (3./20.)*(dxdh**0.67) + (7./21.))
+    ! New form to preseve parameterized mixing - only down 5% at dx = 750 m
+     Psig_bl= ((dxdh**2) + 0.106*(dxdh**0.667))/((dxdh**2) +0.066*(dxdh**0.667) + 0.071)
 
     !assume a 500 m cloud depth for shallow-cu clods
     dxdh=MAX(dx,10.)/MIN(PBL1+500.,3500.)
-    ! Honnert et al. 2011, TKE in entrainment layer
-    Psig_shcu= ((dxdh**2) + (4./21.)*(dxdh**0.667))/((dxdh**2) + &
-             (3./20.)*(dxdh**0.67) + (7./21.))
+    ! Honnert et al. 2011, TKE in entrainment layer *** original form used until 201605
+    !Psig_shcu= ((dxdh**2) + (4./21.)*(dxdh**0.667))/((dxdh**2) + &
+    !         (3./20.)*(dxdh**0.67) + (7./21.))
 
     ! Honnert et al. 2011, TKE in cumulus
     !Psig(i)= ((dxdh**2) + 1.67*(dxdh**1.4))/((dxdh**2) +1.66*(dxdh**1.4) +
@@ -5197,11 +5199,15 @@ SUBROUTINE SCALE_AWARE(dx,PBL1,Psig_bl,Psig_shcu)
     !Psig(i)= ((dxdh**2) - 0.34*(dxdh**1.4))/((dxdh**2) - 0.35*(dxdh**1.4)
     !+ 0.37)
 
-    ! Hyeyum Hailey Shin and Song-You Hong 2013, TKE in entrainment zone
-    !Psig(i)= ((dxdh**2) + 0.145*(dxdh**0.667))/((dxdh**2)
-    !+0.172*(dxdh**0.667) + 0.170)
-    ! Hyeyum Hailey Shin and Song-You Hong 2013, w'theta' in entrainment
-    ! zone
+    ! Hyeyum Hailey Shin and Song-You Hong 2013, TKE in PBL (same as Honnert's above)
+    !Psig_shcu= ((dxdh**2) + 0.070*(dxdh**0.667))/((dxdh**2)
+    !+0.142*(dxdh**0.667) + 0.071)
+    ! Hyeyum Hailey Shin and Song-You Hong 2013, TKE in entrainment zone  *** switch to this form 201605
+    Psig_shcu= ((dxdh**2) + 0.145*(dxdh**0.667))/((dxdh**2) +0.172*(dxdh**0.667) + 0.170)
+
+    ! Hyeyum Hailey Shin and Song-You Hong 2013, w'theta' in PBL
+    !Psig(i)= 0.5 + 0.5*((dxdh**2) -0.098)/((dxdh**2) + 0.106) 
+    ! Hyeyum Hailey Shin and Song-You Hong 2013, w'theta' in entrainment zone
     !Psig(i)= 0.5 + 0.5*((dxdh**2) - 0.112*(dxdh**0.25) -0.071)/((dxdh**2)
     !+ 0.054*(dxdh**0.25) + 0.10)
 
@@ -5324,7 +5330,7 @@ SUBROUTINE SCALE_AWARE(dx,PBL1,Psig_bl,Psig_shcu)
 !    cf3d_temfx -> cldfra_bl1d
 !    au -> moist_a
 
-  SUBROUTINE temf_mf(rand_perturb3,rstoch_col,&
+  SUBROUTINE temf_mf(spp_pbl,rstoch_col,&
                  & kts,kte,dt,zw,p,pi1d,     &
                  & u,v,w,th,thl,thv,qt,qv,qc,&
                  & qke,ust,flt,flq,flqv,flqc,&
@@ -5352,7 +5358,7 @@ SUBROUTINE SCALE_AWARE(dx,PBL1,Psig_bl,Psig_shcu)
                  &F_QC,F_QI,psig)
 
   ! Stochastic
-     INTEGER, INTENT(IN)   :: rand_perturb3
+     INTEGER, INTENT(IN)   :: spp_pbl
      REAL, DIMENSION(kts:kte), INTENT(in)   :: rstoch_col 
   ! inputs:
      INTEGER, INTENT(IN) :: kts,kte

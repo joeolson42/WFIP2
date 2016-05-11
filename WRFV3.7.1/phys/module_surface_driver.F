@@ -3,8 +3,8 @@
 MODULE module_surface_driver
 CONTAINS
 
-   SUBROUTINE surface_driver(rand_perturb,RAND_PERT,field_sf,         &
-     &           rand_perturb3,RAND_PERT3, &         !field_pbl,      &
+   SUBROUTINE surface_driver(spp_lsm,pattern_spp_lsm,field_sf,         &
+     &           spp_pbl,pattern_spp_pbl, &         !field_pbl,      &
      &           HYDRO_dt,sfcheadrt,INFXSRT,soldrain,                 &
      &           acgrdflx,achfx,aclhf                                 &
      &          ,acsnom,acsnow,snowfallac,akhs,akms,albedo,br,canwat  &
@@ -795,11 +795,11 @@ CONTAINS
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN )::   Z
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(INOUT) ::   TKE_PBL
-   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL ::   RAND_PERT,field_sf
-   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL ::   RAND_PERT3!,field_pbl
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL ::   pattern_spp_lsm,field_sf
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL ::   pattern_spp_pbl!,field_pbl
    REAL, DIMENSION(1:num_soil_layers), INTENT(IN)::   DZS
    REAL, DIMENSION(1:num_soil_layers), INTENT(IN)::   ZS
-   INTEGER, INTENT(IN)             ::     rand_perturb,rand_perturb3
+   INTEGER, INTENT(IN)             ::     spp_lsm,spp_pbl
    REAL, INTENT(IN )::   DT
    REAL, INTENT(IN )::   DX
    REAL,       INTENT(IN   ),OPTIONAL    ::     bldt
@@ -2138,7 +2138,7 @@ CONTAINS
           CALL wrf_debug(100,'in MYNNSFC')          
 
          IF (FRACTIONAL_SEAICE == 1) THEN
-          CALL MYNN_SEAICE_WRAPPER(rand_perturb3,RAND_PERT3,&
+          CALL MYNN_SEAICE_WRAPPER(spp_pbl,pattern_spp_pbl,&
                u_phytmp,v_phytmp,t_phy,qv_curr,&
                p_phy,dz8w,cp,g,rcp,r_d,xlv,psfc,chs,chs2,cqs2,cpm, &
                znt,ust,pblh,mavail,zol,mol,regime,psim,psih,       &
@@ -2158,7 +2158,7 @@ CONTAINS
                i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte, &   
                ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,bl_mynn_cloudpdf)
          ELSE
-          CALL SFCLAY_mynn(rand_perturb3,RAND_PERT3,&
+          CALL SFCLAY_mynn(spp_pbl,pattern_spp_pbl,&
                u_phytmp,v_phytmp,t_phy,qv_curr,        &
                p_phy,dz8w,cp,g,rcp,r_d,xlv,psfc,chs,chs2,cqs2,cpm, &
                znt,ust,pblh,mavail,zol,mol,regime,psim,psih,       &
@@ -3070,7 +3070,7 @@ CONTAINS
               ENDIF
            ENDIF
 
-           CALL LSMRUC(rand_perturb,RAND_PERT,field_sf,                      &
+           CALL LSMRUC(spp_lsm,pattern_spp_lsm,field_sf,                      &
                 dtbl,itimestep,num_soil_layers,                 &
 #if (EM_CORE==1)
                 lakemodel,lakemask,                             &
@@ -4553,7 +4553,7 @@ CONTAINS
 
 !-------------------------------------------------------------------------
 
-   SUBROUTINE mynn_seaice_wrapper(rand_perturb3,RAND_PERT3,&
+   SUBROUTINE mynn_seaice_wrapper(spp_pbl,pattern_spp_pbl,&
                      U3D,V3D,T3D,QV3D,P3D,dz8w,     &
                      CP,G,ROVCP,R,XLV,PSFC,CHS,CHS2,CQS2,CPM,      &
                      ZNT,UST,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH, &
@@ -4584,9 +4584,9 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
      REAL,     INTENT(IN )   ::        SVP1,SVP2,SVP3,SVPT0
      REAL,     INTENT(IN )   ::        EP1,EP2,KARMAN
 
-     INTEGER,  INTENT(IN)      ::     rand_perturb3
+     INTEGER,  INTENT(IN)      ::     spp_pbl
      REAL,     DIMENSION( ims:ime, kms:kme, jms:jme )             &
-                               ::   RAND_PERT3 !,field_pbl
+                               ::   pattern_spp_pbl !,field_pbl
 
      REAL,     DIMENSION( ims:ime, kms:kme, jms:jme )           , &
                INTENT(IN   )   ::                           dz8w
@@ -4814,7 +4814,7 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
 !                 its,ite, jts,jte, kts,kte,                    &
 !                 ustm,ck,cka,cd,cda,isftcflx,iz0tlnd           )
 
-          CALL SFCLAY_mynn(rand_perturb3,RAND_PERT3,&
+          CALL SFCLAY_mynn(spp_pbl,pattern_spp_pbl,&
                U3D,V3D,T3D,QV3D,P3D,dz8w,              &
                CP,G,ROVCP,R,XLV,PSFC,CHS,CHS2,CQS2,CPM,            &
                ZNT,UST,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH,       &
@@ -4895,7 +4895,7 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
 !                 ims,ime, jms,jme, kms,kme,                    &
 !                 its,ite, jts,jte, kts,kte,                    & ! 0
 !                 ustm_sea,ck_sea,cka_sea,cd_sea,cda_sea,isftcflx,iz0tlnd )
-          CALL SFCLAY_mynn(rand_perturb3,RAND_PERT3,&
+          CALL SFCLAY_mynn(spp_pbl,pattern_spp_pbl,&
                U3D,V3D,T3D,QV3D,P3D,dz8w,              &
                CP,G,ROVCP,R,XLV,PSFC,                              &
                CHS_SEA,CHS2_SEA,CQS2_SEA,CPM_SEA,                  &

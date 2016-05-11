@@ -26,7 +26,7 @@ MODULE module_cu_gf
 CONTAINS
 
 !-------------------------------------------------------------
-   SUBROUTINE GFDRV(rand_perturb2,RAND_PERT,field_conv,         &
+   SUBROUTINE GFDRV(spp_conv,pattern_spp_conv,field_conv,         &
                DT,itimestep,DX                                  &
               ,rho,RAINCV,PRATEC                                &
               ,U,V,t,W,q,p,pi                                   &
@@ -153,7 +153,7 @@ CONTAINS
                                                    RQCCUTEN,    &
                                                    RQICUTEN
 !  Stochastic
-   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),OPTIONAL  ::RAND_PERT,field_conv
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),OPTIONAL  ::pattern_spp_conv,field_conv
    REAL, DIMENSION( its:ite, 4 )                 ::   rstochcol !,fieldcol_conv
 !
 ! Flags relating to the optional tendency arrays declared above
@@ -169,7 +169,7 @@ CONTAINS
                                                   ,F_QI      &
                                                   ,F_QS
 
-   INTEGER                                 :: rand_perturb2
+   INTEGER                                 :: spp_conv
 
 #if ( WRF_DFI_RADAR == 1 )
 !
@@ -291,13 +291,13 @@ CONTAINS
 
      DO I= its,itf
 ! Stochastic
-        if (rand_perturb2==1) then
+        if (spp_conv==1) then
         do n=1,4
-        rstochcol(i,n)= RAND_PERT(i,n,j)
-        if (RAND_PERT(i,n,j) .le. -1.0) then
+        rstochcol(i,n)= pattern_spp_conv(i,n,j)
+        if (pattern_spp_conv(i,n,j) .le. -1.0) then
           rstochcol(i,n)= -1.0
         endif
-        if (RAND_PERT(i,n,j) .ge.  1.0) then
+        if (pattern_spp_conv(i,n,j) .ge.  1.0) then
           rstochcol(i,n)=  1.0
         endif
         enddo

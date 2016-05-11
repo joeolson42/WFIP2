@@ -148,6 +148,7 @@ contains
       LMAX=(ide-ids)+1 !NLON
       RY=  KMAX*DY
       RX=  LMAX*DX
+     
 
       LENSAV= 4*(KMAX+LMAX)+INT(LOG(REAL(KMAX))) + INT(LOG(REAL(LMAX))) + 8
 
@@ -270,7 +271,7 @@ contains
      if (variable == 'S') then
       WRITE(*,'(''                                               '')')
       WRITE(*,'('' =============================================='')')
-      WRITE(*,'('' >> Initializing random perturbations II << '')')
+      WRITE(*,'('' >> Initializing stochastic parameter perturbations for convection<< '')')
       WRITE(*,'('' rand_pert_vertstruc2                            '',I10)') skebs_vertstruc
       WRITE(*,'('' Decorrelation time of noise, Tau ='',E12.5)') tau_rand_perturb
       WRITE(*,'('' Autoregressive parameter Phi ='',E12.5)') phi
@@ -282,7 +283,7 @@ contains
      if (variable == 'Q') then
       WRITE(*,'(''                                               '')')
       WRITE(*,'('' =============================================='')')
-      WRITE(*,'('' >> Initializing random perturbations III << '')')
+      WRITE(*,'('' >> Initializing stochastic parameter perturbations for PBL<< '')')
       WRITE(*,'('' rand_pert_vertstruc3                            '',I10)') skebs_vertstruc
       WRITE(*,'('' Decorrelation time of noise, Tau ='',E12.5)') tau_rand_perturb
       WRITE(*,'('' Autoregressive parameter Phi ='',E12.5)') phi
@@ -294,7 +295,7 @@ contains
      if (variable == 'O') then
       WRITE(*,'(''                                               '')')
       WRITE(*,'('' =============================================='')')
-      WRITE(*,'('' >> Initializing random perturbations IV << '')')
+      WRITE(*,'('' >> Initializing stochastic parameter perturbations for LSM<< '')')
       WRITE(*,'('' rand_pert_vertstruc4                            '',I10)') skebs_vertstruc
       WRITE(*,'('' Decorrelation time of noise, Tau ='',E12.5)') tau_rand_perturb
       WRITE(*,'('' Autoregressive parameter Phi ='',E12.5)') phi
@@ -323,13 +324,6 @@ contains
             ZCHI(IL+1,IK+1)=((IK/RY*IK/RY)+(IL/RX*IL/RX))**(REXPONENT/2.)  ! SKEBS :U 
             ZGAMMAN= ZGAMMAN + ((IK/RY*IK/RY)+(IL/RX*IL/RX))**(REXPONENT+1)        
           else if (variable == 'T') then
-
-!              if ((KMAX > 200 ) .or. (LMAX > 200 ))  then
-!                        RY= RY/100.
-!                        RX= RX/100.
-!              endif
-
-
             ZCHI(IL+1,IK+1)=((IK/RY*IK/RY)+(IL/RX*IL/RX))**(REXPONENT/2.)  ! SKEBS :T
             ZGAMMAN= ZGAMMAN + ((IK/RY*IK/RY)+(IL/RX*IL/RX))**(REXPONENT)          
           else if ((variable == 'P') .or. (variable == 'R') .or.  (variable == 'S') .or. (variable == 'O') .or.  (variable == 'Q')) then
@@ -716,7 +710,7 @@ contains
 
    IF ((( grid%id == 1) .AND. (.NOT. grid%did_stoch)) .AND. &
        (( grid%skebs_on== 1) .OR.( grid%sppt_on== 1) .OR. ( grid%rand_perturb_on== 1) .OR. &
-         ( grid%rand_perturb2== 1) .OR. ( grid%rand_perturb3== 1) .OR. ( grid%rand_perturb3== 1)) ) THEN
+         ( grid%spp_conv== 1) .OR. ( grid%spp_pbl== 1) .OR. ( grid%spp_lsm== 1)) ) THEN
 
      grid%did_stoch = .TRUE.
 
@@ -836,13 +830,13 @@ IF (grid%sppt_on==1) then
        ENDIF !rand_perturb_on
      ENDIF
 
-! Initialize RAND_PERTURB II 
-     IF (grid%rand_perturb2==1) then
+! Initialize Stochastic Parameter Perturbations to convection scheme
+     IF (grid%spp_conv==1) then
      if (.not.config_flags%restart) then ! set random number seed (else  iseedarray is read in from restart files)
-         call rand_seed (config_flags, grid%ISEED_RAND_PERT2, grid%iseedarr_rand_pert2 , kms, kme)
+         call rand_seed (config_flags, grid%iseed_spp_conv, grid%iseedarr_spp_conv , kms, kme)
      endif
      call SETUP_RAND_PERTURB('S',                                        &
-                       grid%rand_pert_vertstruc2,config_flags%restart,    &
+                       grid%vertstruc_spp_conv,config_flags%restart,    &
                        grid%SP_AMP2,                                      &
                        grid%SPFORCC2,grid%SPFORCS2,grid%ALPH_RAND2,       &
                        grid%VERTSTRUCC,grid%VERTSTRUCS,grid%VERTAMPT,     &
@@ -850,22 +844,22 @@ IF (grid%sppt_on==1) then
                        grid%LMINFORCT,grid%LMAXFORCT,                     &
                        grid%KMAXFORCTH,grid%LMAXFORCTH,                   &
                        grid%time_step,grid%DX,grid%DY,                    &
-                       grid%gridpt_stddev_rand_pert2,                     &
-                       grid%lengthscale_rand_pert2,                       &
-                       grid%timescale_rand_pert2,                         &
+                       grid%gridpt_stddev_spp_conv,                     &
+                       grid%lengthscale_spp_conv,                       &
+                       grid%timescale_spp_conv,                         &
                        grid%TOT_BACKSCAT_PSI,grid%ZTAU_PSI,               &
                        grid%REXPONENT_PSI,                                &
                        ids, ide, jds, jde, kds, kde,                      &
                        ims, ime, jms, jme, kms, kme,                      &
                        its, ite, jts, jte, kts, kte                       )
      ENDIF
-! Initialize RAND_PERTURB III
-     IF (grid%rand_perturb3==1) then
+! Initialize Stochastic Parameter Peturbations (SPP) to PBL scheme
+     IF (grid%spp_pbl==1) then
      if (.not.config_flags%restart) then ! set random number seed (else  iseedarray is read in from restart files)
-         call rand_seed (config_flags, grid%ISEED_RAND_PERT3, grid%iseedarr_rand_pert3 , kms, kme)
+         call rand_seed (config_flags, grid%iseed_spp_pbl, grid%iseedarr_spp_pbl , kms, kme)
      endif
      call SETUP_RAND_PERTURB('Q',                                        &
-                       grid%rand_pert_vertstruc3,config_flags%restart,    &
+                       grid%vertstruc_spp_pbl,config_flags%restart,    &
                        grid%SP_AMP3,                                      &
                        grid%SPFORCC3,grid%SPFORCS3,grid%ALPH_RAND3,       &
                        grid%VERTSTRUCC,grid%VERTSTRUCS,grid%VERTAMPT,     &
@@ -873,22 +867,22 @@ IF (grid%sppt_on==1) then
                        grid%LMINFORCT,grid%LMAXFORCT,                     &
                        grid%KMAXFORCTH,grid%LMAXFORCTH,                   &
                        grid%time_step,grid%DX,grid%DY,                    &
-                       grid%gridpt_stddev_rand_pert3,                     &
-                       grid%lengthscale_rand_pert3,                       &
-                       grid%timescale_rand_pert3,                         &
+                       grid%gridpt_stddev_spp_pbl,                     &
+                       grid%lengthscale_spp_pbl,                       &
+                       grid%timescale_spp_pbl,                         &
                        grid%TOT_BACKSCAT_PSI,grid%ZTAU_PSI,               &
                        grid%REXPONENT_PSI,                                &
                        ids, ide, jds, jde, kds, kde,                      &
                        ims, ime, jms, jme, kms, kme,                      &
                        its, ite, jts, jte, kts, kte                       )
      ENDIF
-! Initialize RAND_PERTURB IV
-     IF (grid%rand_perturb4==1) then
+! Initialize Stochastic Parameter Peturbations (SPP) to LSM scheme
+     IF (grid%spp_lsm==1) then
      if (.not.config_flags%restart) then ! set random number seed (else  iseedarray is read in from restart files)
-         call rand_seed (config_flags, grid%ISEED_RAND_PERT4, grid%iseedarr_rand_pert4 , kms, kme)
+         call rand_seed (config_flags, grid%iseed_spp_lsm, grid%iseedarr_spp_lsm , kms, kme)
      endif
      call SETUP_RAND_PERTURB('O',                                        &
-                       grid%rand_pert_vertstruc4,config_flags%restart,    &
+                       grid%vertstruc_spp_lsm,config_flags%restart,    &
                        grid%SP_AMP4,                                      &
                        grid%SPFORCC4,grid%SPFORCS4,grid%ALPH_RAND4,       &
                        grid%VERTSTRUCC,grid%VERTSTRUCS,grid%VERTAMPT,     &
@@ -896,9 +890,9 @@ IF (grid%sppt_on==1) then
                        grid%LMINFORCT,grid%LMAXFORCT,                     &
                        grid%KMAXFORCTH,grid%LMAXFORCTH,                   &
                        grid%time_step,grid%DX,grid%DY,                    &
-                       grid%gridpt_stddev_rand_pert4,                     &
-                       grid%lengthscale_rand_pert4,                       &
-                       grid%timescale_rand_pert4,                         &
+                       grid%gridpt_stddev_spp_lsm,                     &
+                       grid%lengthscale_spp_lsm,                       &
+                       grid%timescale_spp_lsm,                         &
                        grid%TOT_BACKSCAT_PSI,grid%ZTAU_PSI,               &
                        grid%REXPONENT_PSI,                                &
                        ids, ide, jds, jde, kds, kde,                      &
@@ -906,7 +900,7 @@ IF (grid%sppt_on==1) then
                        its, ite, jts, jte, kts, kte                       )
      ENDIF
 
-     ENDIF ! skebs or sppt or rand_perturb
+     ENDIF ! skebs or sppt or rand_perturb or spp
 !   --- END SETUP STOCHASTIC PERTURBATION SCHEMES ----------
  
       END SUBROUTINE INITIALIZE_STOCH       
