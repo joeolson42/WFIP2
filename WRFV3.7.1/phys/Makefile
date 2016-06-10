@@ -40,6 +40,8 @@ MODULES = \
 	module_bl_qnsepbl.o \
 	module_bl_acm.o \
 	module_bl_mynn.o \
+        module_bl_mynn_v36.o \
+        module_bl_mynn_v34.o \
 	module_bl_fogdes.o \
 	module_bl_gwdo.o \
 	module_bl_myjurb.o \
@@ -138,6 +140,8 @@ MODULES = \
 	module_sf_myjsfc.o \
 	module_sf_qnsesfc.o \
 	module_sf_mynn.o \
+        module_sf_mynn_v36.o \
+        module_sf_mynn_v34.o \
 	module_sf_fogdes.o \
 	module_sf_pxsfclay.o \
 	module_sf_temfsfclay.o \

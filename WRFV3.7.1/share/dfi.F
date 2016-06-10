@@ -26,6 +26,7 @@
 
       ! accumulate dynamic variables
        grid%dfi_mu(:,:)    = grid%dfi_mu(:,:)    + grid%mu_2(:,:)    * hn
+       grid%dfi_psfc(:,:)  = grid%dfi_psfc(:,:)  + grid%psfc(:,:)    * hn
        grid%dfi_u(:,:,:)   = grid%dfi_u(:,:,:)   + grid%u_2(:,:,:)   * hn
        grid%dfi_v(:,:,:)   = grid%dfi_v(:,:,:)   + grid%v_2(:,:,:)   * hn
        grid%dfi_w(:,:,:)   = grid%dfi_w(:,:,:)   + grid%w_2(:,:,:)   * hn
@@ -664,6 +665,7 @@
 
 #if (EM_CORE == 1)
       grid%mu_2(:,:)    = grid%dfi_mu(:,:)      / grid%hcoeff_tot
+      grid%psfc(:,:)    = grid%dfi_psfc(:,:)    / grid%hcoeff_tot
       grid%u_2(:,:,:)   = grid%dfi_u(:,:,:)     / grid%hcoeff_tot
       grid%v_2(:,:,:)   = grid%dfi_v(:,:,:)     / grid%hcoeff_tot
       grid%w_2(:,:,:)   = grid%dfi_w(:,:,:)     / grid%hcoeff_tot
@@ -934,6 +936,7 @@ call wrf_message(mess)
 
 #if (EM_CORE == 1)
       grid%dfi_mu(:,:)       = 0.
+      grid%dfi_psfc(:,:)     = 0.
       grid%dfi_u(:,:,:)      = 0.
       grid%dfi_v(:,:,:)      = 0.
       grid%dfi_w(:,:,:)      = 0.

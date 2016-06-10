@@ -2628,7 +2628,7 @@ integer myproc
 #if ( EM_CORE == 1 )
 !mynn 
 
-        CASE (MYNNSFCSCHEME)
+        CASE (MYNNSFCSCHEME, MYNNSFCSCHEMEV34, MYNNSFCSCHEMEV36)
 
            CALL mynn_sf_init_driver(allowed_to_read)
            isfc=5
@@ -3082,7 +3082,7 @@ CALL lsm_mosaic_init(IVGTYP,config_flags%ISWATER,config_flags%ISURBAN,config_fla
 
 !mynn 
            
-        CASE (MYNNPBLSCHEME2, MYNNPBLSCHEME3)
+        CASE (MYNNPBLSCHEME2, MYNNPBLSCHEME3, MYNNPBLSCHEMEV34, MYNNPBLSCHEMEV36)
            IF(isfc .NE. 5 .AND. isfc .NE. 1 .AND. isfc .NE. 2) CALL wrf_error_fatal &
                 ( 'module_physics_init: use mynnsfc or sfclay or myjsfc scheme for this pbl option')
            IF ((SF_URBAN_PHYSICS.eq.2).OR.(SF_URBAN_PHYSICS.EQ.3)) CALL wrf_error_fatal &
@@ -3095,6 +3095,12 @@ CALL lsm_mosaic_init(IVGTYP,config_flags%ISWATER,config_flags%ISURBAN,config_fla
 
              CASE(MYNNPBLSCHEME3)
                 mynn_closure_level=3
+
+             CASE(MYNNPBLSCHEMEV34)
+                mynn_closure_level=2
+
+             CASE(MYNNPBLSCHEMEV36)
+                mynn_closure_level=2
 
              CASE DEFAULT
 

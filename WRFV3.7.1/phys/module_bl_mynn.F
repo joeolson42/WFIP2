@@ -2088,7 +2088,7 @@ CONTAINS
     &            qc_bl1D, cldfra_bl1D,    & !JOE - subgrid BL clouds
     &            PBLH1,HFX1,              & !JOE - for subgrid BL clouds
     &            edmf_qc1,                &
-    &            Vt, Vq)
+    &            Vt, Vq, th)
 
 !-------------------------------------------------------------------
 
@@ -2096,7 +2096,7 @@ CONTAINS
     REAL, INTENT(IN)      :: dx,PBLH1,HFX1
     REAL, DIMENSION(kts:kte), INTENT(IN) :: dz
     REAL, DIMENSION(kts:kte), INTENT(IN) :: p,exner, thl, qw, &
-         &tsq, qsq, cov, edmf_qc1
+         &tsq, qsq, cov, edmf_qc1, th
 
     REAL, DIMENSION(kts:kte), INTENT(OUT) :: vt,vq
 
@@ -2134,7 +2134,7 @@ CONTAINS
 ! Note: kte needs to be larger than kts, i.e., kte >= kts+1.
     DO k = kts,kte-1
        p2a = exner(k)
-       t  = thl(k)*p2a
+       t  = th(k)*p2a
 
 !x      if ( ct .gt. 0.0 ) then
 !       a  =  17.27
@@ -2453,7 +2453,7 @@ CONTAINS
        &bl_mynn_cloudmix,                  &
        &bl_mynn_mixqt,                     &
        &bl_mynn_edmf,                      &
-       &bl_mynn_edmf_mom                   )
+       &bl_mynn_edmf_mom                  )
 
 !-------------------------------------------------------------------
     INTEGER, INTENT(in) :: kts,kte
@@ -2918,7 +2918,7 @@ ENDIF
     DO k=kts,kte
 
        IF (bl_mynn_mixqt > 0) THEN
-         t  = thl(k)*exner(k)
+         t  = th(k)*exner(k)
          !SATURATED VAPOR PRESSURE
          esat=esat_blend(t)
          !SATURATED SPECIFIC HUMIDITY
@@ -3006,20 +3006,20 @@ ENDIF
        ! THETA TENDENCY
        !===================
        IF (FLAG_QI) THEN
-         !Dth(k)=(thl(k) + xlvcp/exner(k)*sqc(k) &
-         !  &            + xlscp/exner(k)*sqi(k) &
-         !  &            - th(k))/delt
+         Dth(k)=(thl(k) + xlvcp/exner(k)*sqc(k) &
+           &            + xlscp/exner(k)*sqi(k) &
+           &            - th(k))/delt
          !Use form from Tripoli and Cotton (1981) with their
          !suggested min temperature to improve accuracy:
-         Dth(k)=(thl(k)*(1.+ xlvcp/MAX(tk(k),TKmin)*sqc2(k)  &
-           &               + xlscp/MAX(tk(k),TKmin)*sqi2(k)) &
-           &               - th(k))/delt
+         !Dth(k)=(thl(k)*(1.+ xlvcp/MAX(tk(k),TKmin)*sqc2(k)  &
+         !  &               + xlscp/MAX(tk(k),TKmin)*sqi2(k)) &
+         !  &               - th(k))/delt
        ELSE
-         !Dth(k)=(thl(k)+xlvcp/exner(k)*sqc2(k) - th(k))/delt
+         Dth(k)=(thl(k)+xlvcp/exner(k)*sqc2(k) - th(k))/delt
          !Use form from Tripoli and Cotton (1981) with their
          !suggested min temperature to improve accuracy.
-         Dth(k)=(thl(k)*(1.+ xlvcp/MAX(tk(k),TKmin)*sqc2(k))  &
-         &               - th(k))/delt
+         !Dth(k)=(thl(k)*(1.+ xlvcp/MAX(tk(k),TKmin)*sqc2(k))  &
+         !&               - th(k))/delt
        ENDIF
 
     ENDDO
@@ -3405,19 +3405,19 @@ ENDIF
                 IF (PRESENT(qi) .AND. FLAG_QI ) THEN
                    sqi(k)=qi(i,k,j)/(1.+qi(i,k,j))
                    sqw(k)=sqv(k)+sqc(k)+sqi(k)
-                   !thl(k)=th(i,k,j)- xlvcp/exner(i,k,j)*sqc(k) &
-                   !    &           - xlscp/exner(i,k,j)*sqi(k)
+                   thl(k)=th(i,k,j)- xlvcp/exner(i,k,j)*sqc(k) &
+                       &           - xlscp/exner(i,k,j)*sqi(k)
                    !Use form from Tripoli and Cotton (1981) with their
                    !suggested min temperature to improve accuracy.
-                   thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k) &
-                       &               - xlscp/MAX(tk1(k),TKmin)*sqi(k))
+                   !thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k) &
+                   !    &               - xlscp/MAX(tk1(k),TKmin)*sqi(k))
                 ELSE
                    sqi(k)=0.0
                    sqw(k)=sqv(k)+sqc(k)
-                   !thl(k)=th(i,k,j)-xlvcp/exner(i,k,j)*sqc(k)
+                   thl(k)=th(i,k,j)-xlvcp/exner(i,k,j)*sqc(k)
                    !Use form from Tripoli and Cotton (1981) with their 
                    !suggested min temperature to improve accuracy.      
-                   thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k))
+                   !thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k))
                 ENDIF
 
                 IF (k==kts) THEN
@@ -3536,20 +3536,20 @@ ENDIF
                 qi1(k)= qi(i,k,j)
                 sqi(k)= qi(i,k,j)/(1.+qi(i,k,j))
                 sqw(k)= sqv(k)+sqc(k)+sqi(k)
-                !thl(k)= th(i,k,j) - xlvcp/exner(i,k,j)*sqc(k) &
-                !     &            - xlscp/exner(i,k,j)*sqi(k)
+                thl(k)= th(i,k,j) - xlvcp/exner(i,k,j)*sqc(k) &
+                     &            - xlscp/exner(i,k,j)*sqi(k)
                 !Use form from Tripoli and Cotton (1981) with their
                 !suggested min temperature to improve accuracy.    
-                thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k) &
-                    &               - xlscp/MAX(tk1(k),TKmin)*sqi(k))
+                !thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k) &
+                !    &               - xlscp/MAX(tk1(k),TKmin)*sqi(k))
              ELSE
                 qi1(k)=0.0
                 sqi(k)=0.0
                 sqw(k)= sqv(k)+sqc(k)
-                !thl(k)= th(i,k,j)-xlvcp/exner(i,k,j)*sqc(k)
+                thl(k)= th(i,k,j)-xlvcp/exner(i,k,j)*sqc(k)
                 !Use form from Tripoli and Cotton (1981) with their
                 !suggested min temperature to improve accuracy.    
-                thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k))
+                !thl(k)=th(i,k,j)*(1.- xlvcp/MAX(tk1(k),TKmin)*sqc(k))
              ENDIF
 
              IF (PRESENT(qni) .AND. FLAG_QNI ) THEN
@@ -3623,7 +3623,7 @@ ENDIF
           s_awv1(kte+1)=0.
           s_awqke1(kte+1)=0.
 #if (WRF_CHEM == 1)
-          DO ic = 1,ndvel
+          DO ic = 1,nchem
             s_awchem1(kte+1,ic)=0.
           ENDDO
 #endif
@@ -3736,7 +3736,7 @@ ENDIF
                &qc_bl1D,cldfra_bl1D,             & !JOE-subgrid BL clouds
                &PBLH(i,j),HFX(i,j),              & !JOE-subgrid BL clouds
                &edmf_qc1,                        &
-               &Vt, Vq)
+               &Vt, Vq, th1)
 
           CALL mym_turbulence (spp_pbl,rstoch_col,& 
                &kts,kte,levflag, &
@@ -3949,8 +3949,10 @@ ENDIF
                !Reapply checks on cldfra_bl and qc_bl to avoid FPEs in radiation driver
                ! when these two quantities are multiplied by eachother (they may have changed 
                ! in the MF scheme:
-               IF (QC_BL(i,k,j) < 1E-6 .AND. ABS(CLDFRA_BL(i,k,j)) > 0.1)QC_BL(i,k,j)= 1E-6
-               IF (CLDFRA_BL(i,k,j) < 1E-2)CLDFRA_BL(i,k,j)= 0.
+               IF (icloud_bl > 0) THEN
+                 IF (QC_BL(i,k,j) < 1E-6 .AND. ABS(CLDFRA_BL(i,k,j)) > 0.1)QC_BL(i,k,j)= 1E-6
+                 IF (CLDFRA_BL(i,k,j) < 1E-2)CLDFRA_BL(i,k,j)= 0.
+               ENDIF
              ENDIF
 
              !***  Begin debug prints
@@ -4308,7 +4310,7 @@ ENDIF
    REAL :: sigq,xl,tlk,qsat_tl,rsl,cpm,a,qmq,mf_cf,diffqt
 
    ! WA TEST 11/9/15 for consistent reduction of updraft params
-   REAL :: csigma,flt2,flq2,fltv2
+   REAL :: csigma,flt2,flq2,fltv2,acfac
 
 ! check the inputs
 !     print *,'dt',dt
@@ -4410,7 +4412,7 @@ ENDIF
     thstar=flt2/wstar
 
     IF((landsea-1.5).GE.0)THEN
-       csigma = 0.0    ! WATER
+       csigma = 1.34   ! WATER
     ELSE
        csigma = 1.34   ! LAND
     ENDIF
@@ -4436,6 +4438,9 @@ ENDIF
        !UPA(1,I)=0.3*ERF(wtv/(sqrt(2.)*sigmaW)) - 0.3*ERF(wlv/(sqrt(2.)*sigmaW))  !14.6
        !UPA(1,I)=0.25*ERF(wtv/(sqrt(2.)*sigmaW)) - 0.25*ERF(wlv/(sqrt(2.)*sigmaW))  !12.0
        UPA(1,I)=0.2*ERF(wtv/(sqrt(2.)*sigmaW)) - 0.2*ERF(wlv/(sqrt(2.)*sigmaW))   !9.6
+       !Make updraft area a function of the buoyancy flux
+       acfac = .5*tanh((fltv - 0.05)/0.2) + .5
+       UPA(1,I)=UPA(1,I)*acfac
 
        UPU(1,I)=U(1)
        UPV(1,I)=V(1)
@@ -4476,6 +4481,10 @@ ENDIF
           !if(QCn > 1.e-8)ENT(k,i) = max(ENT(k,i),0.0004)
           !JOE - use constant ent in dry plumes in the PBL
           IF(QCn < 1.e-8 .AND. ZW(k) < pblh) ENT(k,i) = max(0.0009,0.3/ZW(k))
+          !JOE - add some w-dependency on entrainment
+          IF(UPW(K-1,I)>0.01) ENT(k,i) = max(ENT(k,i), 0.23/(UPW(K-1,I)*230.))
+          !JOE - increase entrainment for plumes extending too high.
+          IF(ZW(k) >= pblh+2000.) ENT(k,i) =ENT(k,i) + (ZW(k)-(pblh+2000.)) * 2.0E-6
 
           EntExp=exp(-ENT(K,I)*(ZW(k)-ZW(k-1)))
 
@@ -4589,7 +4598,7 @@ ENDIF
             diffqt=edmf_qt(k)-qt(k)
             if(ABS(diffqt) < 1.0E-6)diffqt = 1.0E-6
             !sigq = MAX(edmf_a(k)*(1.-edmf_a(k))*diffqt**2 , 1.0e-8)
-            sigq = MAX(edmf_a(k)*diffqt**2 , 1.0e-8)
+            sigq = MAX(4.*edmf_a(k)*diffqt**2 , 1.0e-8)
             sigq = sqrt(sigq)
 
             xl = xl_blend(tk(k))                ! obtain blended heat capacity
@@ -5123,14 +5132,14 @@ real :: diff,exn,t,qs,qcold
   QC=0.
 
   do i=1,NITER
-     T=EXN*(THL+xlv/cp*QC)
+     T=EXN*THL+xlv/cp*QC
      QS=qsat_blend(T,P)
      QCOLD=QC
      QC=max(0.5*QC + 0.5*(QT-QS),0.)
      if (abs(QC-QCOLD)<Diff) exit
   enddo
 
-  T=exn*(THL+xlv/cp*QC)
+  T=exn*THL+xlv/cp*QC
   QS=qsat_blend(T,P)
   QC=max(QT-QS,0.)
 
@@ -5645,9 +5654,11 @@ SUBROUTINE SCALE_AWARE(dx,PBL1,Psig_bl,Psig_shcu)
             CALL wrf_debug ( 0 , mynn_message )
          ENDIF
 
-         Cepsmf = 2. / max(200.,h0)
+         !Cepsmf = 2. / max(200.,h0)
+         Cepsmf = 1.0 / max(200.,h0) ! WA TEST reduce entrainment 
          ! Cepsmf = max(Cepsmf,0.002)
-         Cepsmf = max(Cepsmf,0.0015)  ! WA TEST reduce max entrainment
+         ! Cepsmf = max(Cepsmf,0.0015)  ! WA TEST reduce max entrainment
+         Cepsmf = max(Cepsmf,0.0005)  ! WA TEST reduce min entrainment
 
          do nu = 1,Nupd
             do k = kts,kte
@@ -5655,8 +5666,9 @@ SUBROUTINE SCALE_AWARE(dx,PBL1,Psig_bl,Psig_shcu)
                ! epsilon and delta are defined on mass grid (half levels)
                ! epsmf(k,nu) = Cepsmf * (1+0.2*(floor(nu - Nupd/2.))) ! WA for three updrafts
                ! epsmf(k,nu) = Cepsmf * (1+0.05*(floor(nu - Nupd/2.))) ! WA for ten updrafts
-               !epsmf(k,nu) = Cepsmf * (1+0.0625*(floor(nu - Nupd/2.))) ! WA for eight updrafts
-               epsmf(k,nu) = Cepsmf * (1+0.03*(floor(nu - Nupd/2.))) ! WA for eight updrafts, less spread
+               ! epsmf(k,nu) = Cepsmf * (1+0.0625*(floor(nu - Nupd/2.))) ! WA for eight updrafts
+               ! epsmf(k,nu) = Cepsmf * (1+0.03*(floor(nu - Nupd/2.))) ! WA for eight updrafts, less spread
+               epsmf(k,nu) = Cepsmf * (1+0.25*(nu-1)) ! WA for eight updrafts, much more eps for some plumes, per Neggers 2015 fig. 15 
             end do
             !print *,"In TEMF_MF Cepsmf, epsmf = ", Cepsmf, epsmf(1,:)
             !IF ( wrf_at_debug_level(MYNN_DBG_LVL) ) THEN
@@ -5862,11 +5874,12 @@ SUBROUTINE SCALE_AWARE(dx,PBL1,Psig_bl,Psig_shcu)
 
             ! Calculate lateral detrainment rate for cloud layer
             ! WA 8/5/15 constant detrainment
-            deltmf(1,nu) = Cepsmf
-            do k = 2,kte-1
-               deltmf(k,nu) = deltmf(k-1,nu)
-            end do
-            deltmf(kte,nu) = Cepsmf
+            ! deltmf(1,nu) = Cepsmf
+            ! do k = 2,kte-1
+            !    deltmf(k,nu) = deltmf(k-1,nu)
+            ! end do
+            ! deltmf(kte,nu) = Cepsmf
+            deltmf(:,nu) = epsmf(:,nu)  ! WA TEST delt = eps everywhere 
 
             ! Calculate mass flux (defined on turbulence levels)
             mf_temfx(1,nu) = CM * wstr / Nupd

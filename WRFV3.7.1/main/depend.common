@@ -506,6 +506,8 @@ module_physics_init.o : \
 		module_sf_slab.o		\
 		module_sf_myjsfc.o		\
 		module_sf_mynn.o                \
+                module_sf_mynn_v36.o            \
+                module_sf_mynn_v34.o            \
 		module_sf_fogdes.o              \
 		module_sf_urban.o               \
 		module_sf_qnsesfc.o		\
@@ -529,6 +531,8 @@ module_physics_init.o : \
 		module_bl_myjpbl.o		\
 		module_bl_qnsepbl.o		\
 		module_bl_mynn.o                \
+		module_bl_mynn_v36.o            \
+                module_bl_mynn_v34.o            \
 		module_bl_myjurb.o              \
 		module_bl_boulac.o              \
 		module_bl_camuwpbl_driver.o     \
@@ -636,6 +640,8 @@ module_pbl_driver.o:  \
 		module_bl_gfs.o \
 		module_bl_gfs2011.o \
 		module_bl_mynn.o \
+                module_bl_mynn_v36.o \
+                module_bl_mynn_v34.o \
 		module_bl_fogdes.o \
 		module_bl_gwdo.o \
 		module_bl_temf.o \
@@ -693,6 +699,8 @@ module_surface_driver.o: \
 		module_sf_ruclsm.o		\
 		module_sf_pxlsm.o		\
 		module_sf_mynn.o                \
+                module_sf_mynn_v36.o            \
+                module_sf_mynn_v34.o            \
 		module_sf_fogdes.o              \
 		module_sf_sfcdiags.o		\
 		module_sf_sfcdiags_ruclsm.o     \

@@ -122,6 +122,7 @@ CONTAINS
    USE module_state_description, ONLY :                            &
                    YSUSCHEME,MRFSCHEME,GFSSCHEME,MYJPBLSCHEME,ACMPBLSCHEME,&
                    QNSEPBLSCHEME,MYNNPBLSCHEME2,MYNNPBLSCHEME3,BOULACSCHEME,&
+                   MYNNPBLSCHEMEV36,MYNNPBLSCHEMEV34,&
                    CAMUWPBLSCHEME,BEPSCHEME,BEP_BEMSCHEME,MYJSFCSCHEME, &
                    FITCHSCHEME,SHINHONGSCHEME,                       &
                    TEMFPBLSCHEME,GBMPBLSCHEME,                       &
@@ -157,6 +158,8 @@ CONTAINS
    USE module_bl_gbmpbl
 #if (EM_CORE==1)
    USE module_bl_mynn
+   USE module_bl_mynn_v36
+   USE module_bl_mynn_v34
    USE module_bl_fogdes
    USE module_wind_fitch
 #endif
@@ -551,7 +554,7 @@ CONTAINS
 
 
 !
-   REAL,       DIMENSION( ims:ime, kms:kme, jms:jme ),            &
+   REAL,       DIMENSION( ims:ime, kms:kme, jms:jme ),       &
                INTENT(OUT)    ::                          EL_PBL
 
    REAL ,                             INTENT(IN   )  ::  u_frame, &
@@ -1677,6 +1680,215 @@ CONTAINS
                   PRESENT( vdfg )
                CALL wrf_debug(0,message)
               CALL wrf_error_fatal('Lack arguments to call MYNN pbl')
+           ENDIF
+
+        CASE (MYNNPBLSCHEMEV36)
+
+           IF ( PRESENT( qv_curr )  .AND. PRESENT( qc_curr )  .AND. &
+                PRESENT( rqvblten ) .AND. PRESENT( rqcblten ) .AND. &
+                PRESENT( qi_curr ) .AND. PRESENT( rqiblten ) .AND.  &
+                PRESENT( rqniblten ) .AND. & !PRESENT( rqncblten ) .AND. &
+                PRESENT( qni_curr ) .AND. & !PRESENT( qnc_curr ) .AND. &
+                PRESENT(qke) .AND. PRESENT(tsq) .AND.               &
+                PRESENT(qsq) .AND. PRESENT(cov) .AND.               &
+                PRESENT(rmol) .AND.                                 &
+                PRESENT(qcg) .AND. PRESENT(ch) .AND.                &
+                PRESENT(grav_settling) .AND.                        &
+                PRESENT(bl_mynn_tkebudget) .AND.                    &
+                PRESENT(qke_adv) .AND. PRESENT(bl_mynn_tkeadvect) .AND.&
+                PRESENT(vdfg) ) THEN
+
+              CALL wrf_debug(100,'in MYNNPBLv36')
+
+              IF (itimestep==1) THEN
+                 initflag=1
+              ELSE
+                 initflag=0
+              ENDIF
+              
+              CALL  mynn_bl_driver_v36(&
+                   &initflag=initflag,&
+                   &grav_settling=grav_settling,&
+                   &delt=dtbl,dz=dz8w,                                   &
+                   &u=u_phy,v=v_phy,th=th_phy,qv=qv_curr,qc=qc_curr,     &
+                   &qi=qi_curr,qni=qni_curr,                             & !qnc=qnc_curr,&
+                   &p=p_phy,exner=pi_phy,rho=rho,T3D=t_phy,              &
+                   &xland=xland,ts=tsk,qsfc=qsfc,qcg=qcg,ps=psfc,        &
+                   &ust=ust,ch=ch,hfx=hfx,qfx=qfx,rmol=rmol,wspd=wspd,   &
+                   &uoce=uoce,voce=voce,                                 & !Ocean currents
+                   &vdfg=vdfg,                                           & !Katata -added 
+                   &Qke=qke,TKE_PBL=tke_pbl,                             & !JOE-for CAMUW shcu
+                   &Sh3d=Sh3d,                                           &
+                   &qke_adv=qke_adv,bl_mynn_tkeadvect=bl_mynn_tkeadvect, &
+                   &Tsq=tsq,Qsq=qsq,Cov=cov,                             &
+                   &RUBLTEN=rublten,RVBLTEN=rvblten,RTHBLTEN=rthblten,   &
+                   &RQVBLTEN=rqvblten,RQCBLTEN=rqcblten,RQIBLTEN=rqiblten,&
+                   !&RQNCBLTEN=rqncblten,                                 &
+                   &RQNIBLTEN=rqniblten,                                 &
+                   &EXCH_H=exch_h,EXCH_M=exch_m,                         &
+                   &pblh=pblh,KPBL=KPBL                                  &
+                   &,el_pbl=el_pbl                                       &
+                   &,dqke=dqke                                           &
+                   &,qWT=qWT,qSHEAR=qSHEAR,qBUOY=qBUOY,qDISS=qDISS       &
+                   &,WSTAR=wstar,DELTA=delta                             & !JOE: for grims shcu
+                   &,bl_mynn_tkebudget=bl_mynn_tkebudget                 &
+                   &,bl_mynn_cloudpdf=bl_mynn_cloudpdf                   &
+                   &,icloud_bl=icloud_bl,qc_bl=qc_bl                     & !JOE-subgrid bl clouds
+                   &,cldfra_bl=cldfra_bl                                 & !JOE-subgrid bl clouds
+                   &,FLAG_QI=flag_qi,FLAG_QNI=flag_qni                   &
+                   &,FLAG_QC=flag_qc,FLAG_QNC=flag_qnc                   &
+                   ,IDS=ids,IDE=ide,JDS=jds,JDE=jde,KDS=kds,KDE=kde      &
+                   ,IMS=ims,IME=ime,JMS=jms,JME=jme,KMS=kms,KME=kme      &
+                   ,ITS=its,ITE=ite,JTS=jts,JTE=jte,KTS=kts,KTE=kte      &
+                   )
+           ELSE
+               WRITE ( message , FMT = '(A,20(L1,1X))' )            &
+                 'present: '//                                      &
+                 'qv_curr, '//                                      &
+                 'qc_curr, '//                                      &
+                 'qi_curr, '//                                      &
+!                 'qnc_curr, '//                                     &
+                 'qni_curr, '//                                     &
+                 'rqvblten, '//                                     &
+                 'rqcblten, '//                                     &
+                 'rqiblten, '//                                     &
+!                 'rqncblten, '//                                    &
+                 'rqniblten, '//                                    &
+                 'qke, '//                                          &
+                 'tsq, '//                                          &
+                 'qsq, '//                                          &
+                 'cov, '//                                          &
+                 'rmol, '//                                         &
+                 'qcg, '//                                          &
+                 'ch, '//                                           &
+                 'grav_settling, '//                                &
+                 'bl_mynn_tkebudget, '//                            &
+                 'qke_adv, '//                                      &
+                 'bl_mynn_tkeadvect, '//                            &
+                 'vdfg = ' ,                                        &
+                  PRESENT( qv_curr ) ,                              &
+                  PRESENT( qc_curr ) ,                              &
+                  PRESENT( qi_curr ) ,                              &
+!                  PRESENT( qnc_curr ) ,                             &
+                  PRESENT( qni_curr ) ,                             &
+                  PRESENT( rqvblten ) ,                             &
+                  PRESENT( rqcblten ) ,                             &
+                  PRESENT( rqiblten ) ,                             &
+!                  PRESENT( rqncblten ) ,                            &
+                  PRESENT( rqniblten ) ,                            &
+                  PRESENT( qke      ) ,                             &
+                  PRESENT( tsq      ) ,                             &
+                  PRESENT( qsq      ) ,                             &
+                  PRESENT( cov      ) ,                             &
+                  PRESENT( rmol     ) ,                             &
+                  PRESENT( qcg      ) ,                             &
+                  PRESENT( ch       ) ,                             &
+                  PRESENT( grav_settling),                          &
+                  PRESENT( bl_mynn_tkebudget) ,                     &
+                  PRESENT( qke_adv  ) ,                             &
+                  PRESENT( bl_mynn_tkeadvect) ,                     &
+                  PRESENT( vdfg )
+               CALL wrf_debug(0,message)
+              CALL wrf_error_fatal('Lack arguments to call MYNNv36 pbl')
+           ENDIF
+
+        CASE (MYNNPBLSCHEMEV34)
+
+           IF ( PRESENT( qv_curr )  .AND. PRESENT( qc_curr )  .AND. &
+                PRESENT( rqvblten ) .AND. PRESENT( rqcblten ) .AND. &
+                PRESENT(qke) .AND. PRESENT(tsq) .AND.               &
+                PRESENT(qsq) .AND. PRESENT(cov) .AND.               &
+                PRESENT(rmol) .AND.                                 &
+                PRESENT(qcg) .AND. PRESENT(ch) .AND.                &
+                PRESENT(grav_settling) .AND. PRESENT(dqke) .AND.    &
+                PRESENT(qWT) .AND. PRESENT(qSHEAR) .AND.            & 
+                PRESENT(qBUOY) .AND. PRESENT(qDISS) .AND.           &
+                PRESENT(bl_mynn_tkebudget) .AND.                    &
+                PRESENT(qke_adv) .AND. PRESENT(bl_mynn_tkeadvect) .AND.&
+                PRESENT(vdfg) ) THEN
+
+              CALL wrf_debug(100,'in MYNNPBLv34')
+
+              IF (itimestep==1) THEN
+                 initflag=1
+              ELSE
+                 initflag=0
+              ENDIF
+              
+              CALL  mynn_bl_driver_v34(&
+                   &initflag=initflag,&
+                   &grav_settling=grav_settling,&
+                   &delt=dtbl,&
+                   &dz=dz8w,&
+                   &u=u_phy,v=v_phy,th=th_phy,qv=qv_curr,qc=qc_curr,&
+                   &p=p_phy,exner=pi_phy,rho=rho,&
+                   &xland=xland,ts=tsk,qsfc=qsfc,qcg=qcg,ps=psfc,&
+                   &ust=ust,ch=ch,hfx=hfx,qfx=qfx,rmol=rmol,wspd=wspd,&
+                   &vdfg=vdfg,&
+                   &Qke=qke,&
+                   &qke_adv=qke_adv,bl_mynn_tkeadvect=bl_mynn_tkeadvect,&
+                   &Tsq=tsq,Qsq=qsq,Cov=cov,&
+                   &Du=rublten,Dv=rvblten,Dth=rthblten,&
+                   &Dqv=rqvblten,Dqc=rqcblten,&
+                   &k_h=exch_h,k_m=exch_m,&
+                   &pblh=pblh&
+                   &,el_pbl=el_pbl                                     &
+                   &,dqke=dqke                                           &
+!mhu                   &,qWT=qWT,qSHEAR=qSHEAR,qBUOY=qBUOY,qDISS=qDISS       &
+                   &,bl_mynn_tkebudget=bl_mynn_tkebudget                 &
+                   &,bl_mynn_cloudpdf=bl_mynn_cloudpdf                   &
+                   ,IDS=ids,IDE=ide,JDS=jds,JDE=jde,KDS=kds,KDE=kde      &
+                   ,IMS=ims,IME=ime,JMS=jms,JME=jme,KMS=kms,KME=kme      &
+                   ,ITS=its,ITE=ite,JTS=jts,JTE=jte,KTS=kts,KTE=kte      &
+                   )
+
+           ELSE
+               WRITE ( message , FMT = '(A,21(L1,1X))' )            &
+                 'present: '//                                      &
+                 'qv_curr, '//                                      &
+                 'qc_curr, '//                                      &
+                 'rqvblten, '//                                     &
+                 'rqcblten, '//                                     &
+                 'qke, '//                                          &
+                 'tsq, '//                                          &
+                 'qsq, '//                                          &
+                 'cov, '//                                          &
+                 'rmol, '//                                         &
+                 'qcg, '//                                          &
+                 'ch, '//                                           &
+                 'grav_settling, '//                                &
+                 'dqke, '//                                         &
+                 'qWT, '//                                          &
+                 'qSHEAR, '//                                       &
+                 'qBUOY, '//                                        &
+                 'qDISS, '//                                        &
+                 'bl_mynn_tkebudget, '//                            &
+                 'qke_adv, '//                                      &
+                 'bl_mynn_tkeadvect, '//                            &
+                 'vdfg = ' ,                                        &
+                  PRESENT( qv_curr ) ,                              &
+                  PRESENT( qc_curr ) ,                              &
+                  PRESENT( rqvblten ) ,                             &
+                  PRESENT( rqcblten ) ,                             &
+                  PRESENT( qke      ) ,                             &
+                  PRESENT( tsq      ) ,                             &
+                  PRESENT( qsq      ) ,                             &
+                  PRESENT( cov      ) ,                             &
+                  PRESENT( rmol     ) ,                             &
+                  PRESENT( qcg      ) ,                             &
+                  PRESENT( ch       ) ,                             &
+                  PRESENT( grav_settling),                          &
+                  PRESENT( dqke     ) ,                             &
+                  PRESENT( qWT      ) ,                             &
+                  PRESENT( qSHEAR   ) ,                             &
+                  PRESENT( qBUOY    ) ,                             &
+                  PRESENT( qSHEAR   ) ,                             &
+                  PRESENT( bl_mynn_tkebudget) ,                     &
+                  PRESENT( qke_adv  ) ,                             &
+                  PRESENT( bl_mynn_tkeadvect) ,                     &
+                  PRESENT( vdfg )
+               CALL wrf_debug(0,message)
+              CALL wrf_error_fatal('Lack arguments to call MYNNv34 pbl')
            ENDIF
 
         CASE (BOULACSCHEME)

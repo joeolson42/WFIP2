@@ -286,6 +286,8 @@ CONTAINS
                                        ,CLMSCHEME                 &
                                        ,SSIBSCHEME                & !ssib
                                        ,MYNNSFCSCHEME             &
+                                       ,MYNNSFCSCHEMEV36          &
+                                       ,MYNNSFCSCHEMEV34          &
                                        ,OMLSCHEME                 &
                                        ,PWP3DSCHEME
 #else
@@ -331,6 +333,8 @@ CONTAINS
    USE module_sf_noah_seaice_drv
 #if ( EM_CORE==1)
    USE module_sf_mynn
+   USE module_sf_mynn_v36
+   USE module_sf_mynn_v34
    USE module_sf_fogdes    ! Katata - fog deposition module
    USE module_sf_ocean_driver
    USE module_sf_idealscmsfclay
@@ -1683,6 +1687,8 @@ CONTAINS
             (sf_sfclay_physics .EQ. QNSESFCSCHEME ) .OR. &  !emt
 #if (EM_CORE==1)
             (sf_sfclay_physics .EQ. MYNNSFCSCHEME ) .OR. &
+            (sf_sfclay_physics .EQ. MYNNSFCSCHEMEV36 ) .OR. &
+            (sf_sfclay_physics .EQ. MYNNSFCSCHEMEV34 ) .OR. &
 #endif
             (sf_sfclay_physics .EQ. GFSSFCSCHEME ) )    &
            )
@@ -2178,6 +2184,57 @@ CONTAINS
           CALL wrf_error_fatal('Lacking arguments for SFCLAY_mynn in surface driver')
  
        ENDIF
+
+    CASE(MYNNSFCSCHEMEV36)
+
+       IF (PRESENT(qv_curr)    .AND.  PRESENT(qc_curr)     &
+            & .AND.  PRESENT(qcg) ) THEN
+
+          CALL wrf_debug(100,'in MYNNSFC V36')
+
+          CALL SFCLAY_mynn_V36(u_phytmp,v_phytmp,t_phy,qv_curr,        &
+               p_phy,dz8w,cp,g,rcp,r_d,xlv,psfc,chs,chs2,cqs2,cpm, &
+               znt,ust,pblh,mavail,zol,mol,regime,psim,psih,       &
+               xland,hfx,qfx,lh,tsk,flhc,flqc,qgh,qsfc,rmol,       &
+               u10,v10,th2,t2,q2,SNOWH,                            &
+               gz1oz0,wspd,br,isfflx,dx,                           &
+               svp1,svp2,svp3,svpt0,ep_1,ep_2,karman,              &
+               &itimestep,ch,th_phy,pi_phy,qc_curr,rho,            &
+               &tsq,qsq,cov,Sh3D,el_pbl,qcg,                       &
+               &icloud_bl,qc_bl,cldfra_bl,                         &
+               ids,ide, jds,jde, kds,kde,                          &
+               ims,ime, jms,jme, kms,kme,                          &
+               i_start(ij),i_end(ij),j_start(ij),j_end(ij),kts,kte,&
+               ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,bl_mynn_cloudpdf)
+       ELSE
+          CALL wrf_error_fatal('Lacking arguments for SFCLAY_mynnV36 in surface driver')
+       ENDIF
+
+    CASE(MYNNSFCSCHEMEV34)
+
+       IF (PRESENT(qv_curr)    .AND.  PRESENT(qc_curr)     &
+            & .AND.  PRESENT(qcg) ) THEN
+          
+          CALL wrf_debug(100,'in MYNNSFCv3.4') 
+
+          CALL SFCLAY_mynn_v34(u_phytmp,v_phytmp,t_phy,qv_curr,        &
+               p_phy,dz8w,cp,g,rcp,r_d,xlv,psfc,chs,chs2,cqs2,cpm, &
+               znt,ust,pblh,mavail,zol,mol,regime,psim,psih,       &
+               xland,hfx,qfx,lh,tsk,flhc,flqc,qgh,qsfc,rmol,       &
+               u10,v10,th2,t2,q2,                                  &
+               gz1oz0,wspd,br,isfflx,dx,                           &
+               svp1,svp2,svp3,svpt0,ep_1,ep_2,karman,              &
+               &itimestep,ch,th_phy,pi_phy,qc_curr,rho,                &
+               &tsq,qsq,cov,qcg,                                   &
+               ids,ide, jds,jde, kds,kde,                          &
+               ims,ime, jms,jme, kms,kme,                          &
+               i_start(ij),i_end(ij),j_start(ij),j_end(ij),kts,kte,&
+               ustm,ck,cka,cd,cda,isftcflx,iz0tlnd                 )
+
+       ELSE
+          CALL wrf_error_fatal('Lacking args for SFCLAY_mynnV34 in surf driver') 
+       ENDIF
+
 #endif
 
 #if ( EM_CORE==1)

@@ -167,6 +167,7 @@ CONTAINS
 
    REAL,    DIMENSION( ims:ime, kms:kme, jms:jme ),OPTIONAL::    pattern_spp_lsm
    REAL,    DIMENSION( ims:ime, kms:kme, jms:jme ),OPTIONAL::    field_sf
+   REAL,    DIMENSION( ims:ime, 1  :nsl, jms:jme )         ::    field_sf_loc
 
    REAL,    DIMENSION( ims:ime, kms:kme, jms:jme )            , &
             INTENT(IN   )    ::                           QV3D, &
@@ -384,24 +385,25 @@ CONTAINS
    INTEGER   ::  k1,l,k2,kp,km
    CHARACTER (LEN=132) :: message
 
-   REAL,DIMENSION(ims:ime,kms:nsl,jms:jme) :: rstoch 
+   REAL,DIMENSION(ims:ime,1:nsl,jms:jme) :: rstoch 
 
 !-----------------------------------------------------------------
          NZS=NSL
          NDDZS=2*(nzs-2)
 
+         rstoch=0.0
+         field_sf_loc=0.0
 !beka added
-     do J=jts,jte
-        do i=its,ite
-           do k=1,nsl
        if (spp_lsm==1) then
-           rstoch(i,k,j) = pattern_spp_lsm(i,k,j)
-       else
-           rstoch(i,k,j)=0.0
+         do J=jts,jte
+           do i=its,ite
+             do k=1,nsl
+               rstoch(i,k,j) = pattern_spp_lsm(i,k,j)
+               field_sf_loc(i,k,j)=field_sf(i,k,j)
+             enddo
+           enddo
+         enddo 
        endif  
-            enddo
-         enddo
-      enddo 
 !---- table TBQ is for resolution of balance equation in VILKA
         CQ=173.15-.05
         R273=1./273.15
@@ -537,7 +539,6 @@ CONTAINS
       print *, 'LSMRUC, I,J,xland, QFX,HFX from SFCLAY',i,j,xland(i,j), &
                   qfx(i,j),hfx(i,j)
       print *, ' GSW, GLW =',gsw(i,j),glw(i,j)
-      print *, 'SNHEI=',snhei
       print *, 'SOILT, TSO start of time step =',soilt(i,j),(tso(i,k,j),k=1,nsl)
       print *, 'SOILMOIS start of time step =',(soilmois(i,k,j),k=1,nsl)
       print *, 'SMFROZEN start of time step =',(smfr3d(i,k,j),k=1,nsl)
@@ -905,9 +906,12 @@ CONTAINS
                     (zsmain(nzs)-zshalf(nzs))
 
         canwatold(i,j) = canwatr
+    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
+      print *,'before SFCTMP, spp_lsm, rstoch, field_sf_loc',      &
+      i,j,spp_lsm,(rstoch(i,k,j),k=1,nzs),(field_sf_loc(i,k,j),k=1,nzs)
+    ENDIF
 !-----------------------------------------------------------------
-         CALL SFCTMP (spp_lsm,                              & 
-                rstoch(i,1:nzs,j),field_sf(i,1:nzs,j),  & 
+         CALL SFCTMP (spp_lsm,rstoch(i,:,j),field_sf_loc(i,:,j), & 
                 dt,ktau,conflx,i,j,                              &
 !--- input variables
                 nzs,nddzs,nroot,meltfactor,                      &   !added meltfactor
@@ -937,7 +941,7 @@ CONTAINS
                 SNOH(I,J),SNFLX(I,J),SNOM(I,J),SNOWFALLAC(I,J),  &
                 ACSNOW(I,J),edir(I,J),ec(I,J),ett(I,J),qfx(I,J), &
                 lh(I,J),hfx(I,J),sflx(I,J),sublim(I,J),          &
-                evapl(I,J),prcpl(I,J),budget(i,j),runoff1(i,j), &
+                evapl(I,J),prcpl(I,J),budget(i,j),runoff1(i,j),  &
                 runoff2(I,J),soilice,soiliqw,infiltrp,smf(i,j))
 !-----------------------------------------------------------------
 
@@ -983,6 +987,13 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
           endif
         enddo
     ENDIF
+
+! Fill in field_sf to pass perturbed field of hydraulic cond. up to model driver and output
+       if (spp_lsm==1) then
+         do k=1,nsl
+           field_sf(i,k,j)=field_sf_loc(i,k,j)
+         enddo
+       endif
 
 !***  DIAGNOSTICS
 !--- available and maximum soil moisture content in the soil
@@ -1159,7 +1170,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
 
 
-   SUBROUTINE SFCTMP (spp_lsm,rstochcol,fieldcol_sf,        &
+   SUBROUTINE SFCTMP (spp_lsm,rstochcol,fieldcol_sf,             &
                 delt,ktau,conflx,i,j,                            &
 !--- input variables
                 nzs,nddzs,nroot,meltfactor,                      &
@@ -1184,7 +1195,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
                 tsnav,dew,qvg,qsg,qcg,                           &
                 SMELT,SNOH,SNFLX,SNOM,SNOWFALLAC,ACSNOW,         &
                 edir1,ec1,ett1,eeta,qfx,hfx,s,sublim,            &
-                evapl,prcpl,fltot,runoff1,runoff2,soilice,             &
+                evapl,prcpl,fltot,runoff1,runoff2,soilice,       &
                 soiliqw,infiltr,smf)
 !-----------------------------------------------------------------
        IMPLICIT NONE
@@ -1551,11 +1562,14 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
       else
           CST=0.
           DRIP=0.
+          interw=0.
+          intersn=0.
+          infwater=PRCPMS
       endif ! vegfrac > 0.01
 
        IF(NEWSN.GT.0.) THEN
 !Update snow on the ground
-         snwe=snwe+newsn-intersn+drip
+         snwe=snwe+newsn-intersn
          newsnowratio = min(1.,newsn/snwe)
          snhei=snwe*rhowater/rhosn
          NEWSN=NEWSN*rhowater/rhonewsn
@@ -2136,7 +2150,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
        FUNCTION QSN(TN,T)
 !****************************************************************
-   REAL,     DIMENSION(1:4001),  INTENT(IN   )   ::  T
+   REAL,     DIMENSION(1:5001),  INTENT(IN   )   ::  T
    REAL,     INTENT(IN  )   ::  TN
 
       REAL    QSN, R,R1,R2
@@ -2147,9 +2161,9 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
        IF(I.GE.1) goto 10
        I=1
        R=1.
-  10   IF(I.LE.4000) GOTO 20
-       I=4000
-       R=4001.
+  10   IF(I.LE.5000) GOTO 20
+       I=5000
+       R=5001.
   20   R1=T(I)
        R2=R-I
        QSN=(T(I+1)-R1)*R2 + R1
@@ -2717,7 +2731,6 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
      else ! myj
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
 !    IF(i.eq.440.and.j.eq.180.or. QFX.gt.1000..or.i.eq.417.and.j.eq.540) then
-!    IF(i.eq.374.and.j.eq.310.or. EETA.gt.0.0004) then
        print *,'QKMS,RAS,QVATM/(1.+QVATM),QVG/(1.+QVG),QSG ', &
                 QKMS,RAS,QVATM/(1.+QVATM),QVG/(1.+QVG),QSG
        print *,'Q1*(1.-vegfrac),EDIR1',Q1*(1.-vegfrac),EDIR1
@@ -7207,7 +7220,11 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
            READ (19,*)
            READ (19,*)CROP
            READ (19,*)
-           READ (19,*)URBAN
+           READ (19,*,iostat=ierr)URBAN
+           if ( ierr /= 0 ) call wrf_message     (  "-------- VEGPARM.TBL READ ERROR --------")
+           if ( ierr /= 0 ) call wrf_message     (  "Problem read URBAN from VEGPARM.TBL")
+           if ( ierr /= 0 ) call wrf_message     (  " -- Use updated version of VEGPARM.TBL  ")
+           if ( ierr /= 0 ) call wrf_error_fatal (  "Problem read URBAN from VEGPARM.TBL")
 
         ENDIF
 
