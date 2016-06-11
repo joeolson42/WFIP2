@@ -2122,7 +2122,7 @@ CONTAINS
     REAL::zagl,cld9,damp,edown,RHcrit,RHmean,RHsum,RHnum,Hshcu,PBLH2
     REAL, PARAMETER :: Hfac = 3.0     !cloud depth factor for HFX (m^3/W)
     REAL, PARAMETER :: HFXmin = 50.0  !min W/m^2 for BL clouds
-    REAL            :: RH_00L, RH_00O, phi_dz
+    REAL            :: RH_00L, RH_00O, phi_dz, lfac
     REAL, PARAMETER :: cdz = 2.0
     REAL, PARAMETER :: mdz = 1.5
 
@@ -2230,8 +2230,10 @@ CONTAINS
                                                 ! in CB02
 
           zagl = zagl + dz(k)
-          !ls = MIN(MAX(zagl,25.),300.)
-          ls = MIN(el(k),300.)
+          ls = MIN(MAX(zagl,25.),100.) !let this be the minimum possible ls
+          !ls = MIN(el(k),300.)
+          lfac=MIN(2.25+dx/4000.,4.)
+          ls = MAX(MIN(lfac*el(k),500.),ls)
                   ! CB02 use 900 m as a (constant) free-atmosphere length scale. 
                   ! The form above was selected based on HRRR tests.
 
@@ -4481,7 +4483,7 @@ ENDIF
           !if(QCn > 1.e-8)ENT(k,i) = max(ENT(k,i),0.0004)
           !JOE - use constant ent in dry plumes in the PBL
           IF(QCn < 1.e-8 .AND. ZW(k) < pblh) ENT(k,i) = max(0.0009,0.3/ZW(k))
-          !JOE - add some w-dependency on entrainment
+          !JOE - add some w-dependency for entrainment
           IF(UPW(K-1,I)>0.01) ENT(k,i) = max(ENT(k,i), 0.23/(UPW(K-1,I)*230.))
           !JOE - increase entrainment for plumes extending too high.
           IF(ZW(k) >= pblh+2000.) ENT(k,i) =ENT(k,i) + (ZW(k)-(pblh+2000.)) * 2.0E-6
@@ -4598,7 +4600,7 @@ ENDIF
             diffqt=edmf_qt(k)-qt(k)
             if(ABS(diffqt) < 1.0E-6)diffqt = 1.0E-6
             !sigq = MAX(edmf_a(k)*(1.-edmf_a(k))*diffqt**2 , 1.0e-8)
-            sigq = MAX(4.*edmf_a(k)*diffqt**2 , 1.0e-8)
+            sigq = MAX(5.*edmf_a(k)*diffqt**2 , 1.0e-8)
             sigq = sqrt(sigq)
 
             xl = xl_blend(tk(k))                ! obtain blended heat capacity
