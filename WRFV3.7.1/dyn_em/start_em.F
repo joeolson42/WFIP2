@@ -1939,6 +1939,7 @@ endif
       REAL :: p_surf ,  pd_surf, p_surf_int , pb_int , ht_hold
       REAL :: qvf , qvf1 , qvf2, qtot
       REAL :: pfu, pfd, phm
+      REAL :: z0, z1, z2, w1, w2
 
       !  Local domain indices and counters.
 
@@ -2155,6 +2156,14 @@ endif
 
             END IF ! hypsometric
        ENDIF ! nmoist
+
+! update surface pressure PSFC:
+               z0 = grid%ph0(i,1,j)/g
+               z1 = 0.5*(grid%ph0(i,1,j)+grid%ph0(i,2,j))/g
+               z2 = 0.5*(grid%ph0(i,2,j)+grid%ph0(i,3,j))/g
+               w1 = (z0 - z2)/(z1 - z2)
+               w2 = 1. - w1
+               grid%psfc(i,j) = w1*(grid%p(i,1,j)+grid%pb(i,1,j))+w2*(grid%p(i,2,j)+grid%pb(i,2,j))
 
          END DO !i
         ENDDO !j

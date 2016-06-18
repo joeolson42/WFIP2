@@ -5504,7 +5504,8 @@ END SUBROUTINE phy_prep
           PRESENT(dfi_tten_rad_1) .and. PRESENT(dfi_tten_rad_2) .and. &
           PRESENT(dfi_tten_rad_3) .and. PRESENT(dfi_tten_rad_4) ) THEN
        tten_time_index = 1
-       do while ( (tten_time_index.le.4) .and. (xtime .gt. tten_times(tten_time_index)) )
+       do while ( (tten_time_index.lt.4) .and. (xtime .gt. tten_times(tten_time_index)) )
+!tgs       do while ( (tten_time_index.le.4) .and. (xtime .gt. tten_times(tten_time_index)) )
          tten_time_index = tten_time_index + 1
        end do
        if (tten_time_index.le.4) then

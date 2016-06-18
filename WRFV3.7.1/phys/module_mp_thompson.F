@@ -1347,15 +1347,15 @@
       enddo j_loop
 
 ! DEBUG - GT
-      write(mp_debug,'(a,7(a,e13.6,1x,a,i3,a,i3,a,i3,a,1x))') 'MP-GT:', &
-         'qc: ', qc_max, '(', imax_qc, ',', jmax_qc, ',', kmax_qc, ')', &
-         'qr: ', qr_max, '(', imax_qr, ',', jmax_qr, ',', kmax_qr, ')', &
-         'qi: ', qi_max, '(', imax_qi, ',', jmax_qi, ',', kmax_qi, ')', &
-         'qs: ', qs_max, '(', imax_qs, ',', jmax_qs, ',', kmax_qs, ')', &
-         'qg: ', qg_max, '(', imax_qg, ',', jmax_qg, ',', kmax_qg, ')', &
-         'ni: ', ni_max, '(', imax_ni, ',', jmax_ni, ',', kmax_ni, ')', &
-         'nr: ', nr_max, '(', imax_nr, ',', jmax_nr, ',', kmax_nr, ')'
-      CALL wrf_debug(150, mp_debug)
+!      write(mp_debug,'(a,7(a,e13.6,1x,a,i3,a,i3,a,i3,a,1x))') 'MP-GT:', &
+!         'qc: ', qc_max, '(', imax_qc, ',', jmax_qc, ',', kmax_qc, ')', &
+!         'qr: ', qr_max, '(', imax_qr, ',', jmax_qr, ',', kmax_qr, ')', &
+!         'qi: ', qi_max, '(', imax_qi, ',', jmax_qi, ',', kmax_qi, ')', &
+!         'qs: ', qs_max, '(', imax_qs, ',', jmax_qs, ',', kmax_qs, ')', &
+!         'qg: ', qg_max, '(', imax_qg, ',', jmax_qg, ',', kmax_qg, ')', &
+!         'ni: ', ni_max, '(', imax_ni, ',', jmax_ni, ',', kmax_ni, ')', &
+!         'nr: ', nr_max, '(', imax_nr, ',', jmax_nr, ',', kmax_nr, ')'
+!      CALL wrf_debug(150, mp_debug)
 ! END DEBUG - GT
 
       do i = 1, 256
@@ -1595,6 +1595,16 @@
          pnd_rcd(k) = 0.
          pnd_scd(k) = 0.
          pnd_gcd(k) = 0.
+
+         smob(k) = 0.
+         smo2(k) = 0.
+         smo1(k) = 0.
+         smo0(k) = 0.
+         smoc(k) = 0.
+         smod(k) = 0.
+         smoe(k) = 0.
+         smof(k) = 0.
+
       enddo
 #if ( WRF_CHEM == 1 )
       do k = kts, kte

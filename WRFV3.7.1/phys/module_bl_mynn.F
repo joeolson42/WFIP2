@@ -2537,7 +2537,7 @@ CONTAINS
     a(1)=0.
     b(1)=1. + dtz(k)*(dfm(k+1)+ust**2/wspd) - 0.5*dtz(k)*s_aw(k+1)*onoff
     c(1)=-dtz(k)*dfm(k+1) - 0.5*dtz(k)*s_aw(k+1)*onoff
-    d(1)=u(k) + dtz(k)*uoce*ust**2/wspd - dtz(k)*s_awu(k+1)
+    d(1)=u(k) + dtz(k)*uoce*ust**2/wspd - dtz(k)*s_awu(k+1)*onoff
 
 !!    a(1)=0.
 !!    b(1)=1.+dtz(k)*dfm(k+1)
@@ -2549,7 +2549,7 @@ CONTAINS
        a(kk)=-dtz(k)*dfm(k) + 0.5*dtz(k)*s_aw(k)*onoff
        b(kk)=1. + dtz(k)*(dfm(k)+dfm(k+1)) + 0.5*dtz(k)*(s_aw(k)-s_aw(k+1))*onoff
        c(kk)=-dtz(k)*dfm(k+1) - 0.5*dtz(k)*s_aw(k+1)*onoff
-       d(kk)=u(k) + dtz(k)*(s_awu(k)-s_awu(k+1))
+       d(kk)=u(k) + dtz(k)*(s_awu(k)-s_awu(k+1))*onoff
     ENDDO
 
 !! no flux at the top
@@ -2586,7 +2586,7 @@ CONTAINS
     b(1)=1. + dtz(k)*(dfm(k+1)+ust**2/wspd) - 0.5*dtz(k)*s_aw(k+1)*onoff
     c(1)=-dtz(k)*dfm(k+1) - 0.5*dtz(k)*s_aw(k+1)*onoff
 !    d(1)=v(k)
-    d(1)=v(k) + dtz(k)*voce*ust**2/wspd - dtz(k)*s_awv(k+1)
+    d(1)=v(k) + dtz(k)*voce*ust**2/wspd - dtz(k)*s_awv(k+1)*onoff
 
 !!    a(1)=0.
 !!    b(1)=1.+dtz(k)*dfm(k+1)
@@ -2598,7 +2598,7 @@ CONTAINS
        a(kk)=-dtz(k)*dfm(k) + 0.5*dtz(k)*s_aw(k)*onoff
        b(kk)=1. + dtz(k)*(dfm(k)+dfm(k+1)) + 0.5*dtz(k)*(s_aw(k)-s_aw(k+1))*onoff
        c(kk)=-dtz(k)*dfm(k+1) - 0.5*dtz(k)*s_aw(k+1)*onoff
-       d(kk)=v(k) + dtz(k)*(s_awv(k)-s_awv(k+1))
+       d(kk)=v(k) + dtz(k)*(s_awv(k)-s_awv(k+1))*onoff
     ENDDO
 
 !! no flux at the top
@@ -3959,24 +3959,18 @@ ENDIF
 
              !***  Begin debug prints
              IF ( wrf_at_debug_level(3000) ) THEN
-               IF ( sh(k) < 0. .OR. sh(k)> 200. .OR. &
-                 & qke(i,k,j) < -1. .OR. qke(i,k,j)> 200. .OR. &
-                 & el_pbl(i,k,j) < 0. .OR. el_pbl(i,k,j)> 2000. .OR. &
-                 & ABS(vt(k)) > 0.8 .OR. ABS(vq(k)) > 3000. .OR. &
-                 & exch_m(i,k,j) < 0. .OR. exch_m(i,k,j)> 2000. .OR. &
-                 & vdfg(i,j) < 0. .OR. vdfg(i,j)>5. .OR. &
-                 & ABS(HFX(i,j))>1000. .OR. ABS(QFX(i,j))>.001) THEN
-                  PRINT*,"**SUSPICIOUS VALUES AT: k=",k," sh=",sh(k)
-                  PRINT*," sqw=",sqw(k)," thl=",thl(k)," k_m=",exch_m(i,k,j)
-                  PRINT*," xland=",xland(i,j)," rmol=",rmol(i,j)," ust=",ust(i,j)
-                  PRINT*," qke=",qke(i,k,j)," el=",el_pbl(i,k,j)," tsq=",tsq(i,k,j)
-                  PRINT*," PBLH=",PBLH(i,j)," u=",u(i,k,j)," v=",v(i,k,j)
-                  PRINT*," vq=",vq(k)," vt=",vt(k)," vdfg=",vdfg(i,j)
-                  PRINT*," hfx=",HFX(i,j)," qfx=",QFX(i,j)
-               ENDIF
+               IF ( sh(k) < 0. .OR. sh(k)> 200.)print*,"**SUSPICIOUS VALUES AT: i,j,k=",i,j,k," sh=",sh(k)
+               IF ( qke(i,k,j) < -1. .OR. qke(i,k,j)> 200.)print*,"**SUSPICIOUS VALUES AT: i,j,k=",i,j,k," qke=",qke(i,k,j)
+               IF ( el_pbl(i,k,j) < 0. .OR. el_pbl(i,k,j)> 2000.)print*,"**SUSPICIOUS VALUES AT: i,j,k=",i,j,k," el_pbl=",el_pbl(i,k,j)
+               IF ( ABS(vt(k)) > 0.8 )print*,"**SUSPICIOUS VALUES AT: i,j,k=",i,j,k," vt=",vt(k)
+               IF ( ABS(vq(k)) > 6000.)print*,"**SUSPICIOUS VALUES AT: i,j,k=",i,j,k," vq=",vq(k) 
+               IF ( exch_m(i,k,j) < 0. .OR. exch_m(i,k,j)> 2000.)print*,"**SUSPICIOUS VALUES AT: i,j,k=",i,j,k," exxch_m=",exch_m(i,k,j)
+               IF ( vdfg(i,j) < 0. .OR. vdfg(i,j)>5. )print*,"**SUSPICIOUS VALUES AT: i,j,k=",i,j,k," vdfg=",vdfg(i,j)
+               IF ( ABS(QFX(i,j))>.001)print*, "**SUSPICIOUS VALUES AT: i,j=",i,j," QFX=",QFX(i,j) 
+               IF ( ABS(HFX(i,j))>1000.)print*, "**SUSPICIOUS VALUES AT: i,j=",i,j," HFX=",HFX(i,j)
                IF (icloud_bl > 0) then
                   IF( cldfra_bl(i,k,j) < 0.0 .OR. cldfra_bl(i,k,j)> 1.)THEN
-                  PRINT*,"CLDFRA_BL=",cldfra_bl(i,k,j)," qc_bl=",QC_BL(i,k,j)
+                  PRINT*,"**SUSPICIOUS VALUES: CLDFRA_BL=",cldfra_bl(i,k,j)," qc_bl=",QC_BL(i,k,j)
                   ENDIF
                ENDIF
              ENDIF
