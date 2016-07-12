@@ -553,7 +553,7 @@ CONTAINS
             GZ10OZt, &    !LOG((10.+z_t(i))/z_t(i))
              GZ1OZt       !LOG((ZA(I)+z_t(i))/z_t(i))
 
-      INTEGER ::  N,I,K,L,NZOL,NK,NZOL2,NZOL10, ITER
+      INTEGER ::  N,I,K,L,NZOL,NK,NZOL2,NZOL10, ITER, yesno
       INTEGER, PARAMETER :: ITMAX=1
 
       REAL    ::  PL,THCON,TVCON,E1
@@ -1259,30 +1259,58 @@ CONTAINS
    ENDIF !end ISFFLX option
 
    IF ( wrf_at_debug_level(3000) ) THEN
-   IF (HFX(I) > 1200. .OR. HFX(I) < -500. .OR. &
-      &LH(I)  > 1200. .OR. LH(I)  < -500. .OR. &
-      &UST(I) < 0.0 .OR. UST(I) > 4.0 .OR. &
-      &WSTAR(I)<0.0 .OR. WSTAR(I) > 6.0 .OR. &
-      &RHO1D(I)<0.0 .OR. RHO1D(I) > 1.6 .OR. &
-      &QSFC(I)*1000. <0.0 .OR. QSFC(I)*1000. >38. .OR. &
-      &PBLH(I)>6000.) THEN
-      print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&
-            ITER-ITMAX," ITERATIONS",I,J
-      write(*,1000)"HFX: ",HFX(I)," LH:",LH(I)," CH:",CH(I),&
-            " PBLH:",PBLH(I)
-      write(*,1001)"REGIME:",REGIME(I)," z/L:",ZOL(I)," U*:",UST(I),&
-            " Tstar:",MOL(I)
-      write(*,1002)"PSIM:",PSIM(I)," PSIH:",PSIH(I)," W*:",WSTAR(I),&
-            " DTHV:",THV1D(I)-THVGB(I)
-      write(*,1003)"CPM:",CPM(I)," RHO1D:",RHO1D(I)," L:",&
-            ZOL(I)/ZA(I)," DTH:",TH1D(I)-THGB(I)
-      write(*,1004)"Z0/Zt:",zratio(I)," Z0:",ZNT(I)," Zt:",z_t(I),&
-            " za:",za(I)
-      write(*,1005)"Re:",restar," MAVAIL:",MAVAIL(I)," QSFC(I):",&
-            QSFC(I)," QVSH(I):",QVSH(I)
-      print*,"PSIX=",PSIX," Z0:",ZNT(I)," T1D(i):",T1D(i)
-      write(*,*)"============================================="
-   ENDIF
+      yesno = 0
+      IF (HFX(I) > 1200. .OR. HFX(I) < -500.)THEN
+            print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&
+            ITER-ITMAX," ITERATIONS",I,J, "HFX: ",HFX(I)
+            yesno = 1
+      ENDIF
+      IF (LH(I)  > 1200. .OR. LH(I)  < -500.)THEN
+            print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&
+            ITER-ITMAX," ITERATIONS",I,J, "LH: ",LH(I)
+            yesno = 1
+      ENDIF
+      IF (UST(I) < 0.0 .OR. UST(I) > 4.0 )THEN
+            print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&                                                                     
+            ITER-ITMAX," ITERATIONS",I,J, "UST: ",UST(I)
+            yesno = 1
+      ENDIF
+      IF (WSTAR(I)<0.0 .OR. WSTAR(I) > 6.0)THEN
+            print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&
+            ITER-ITMAX," ITERATIONS",I,J, "WSTAR: ",WSTAR(I)
+            yesno = 1
+      ENDIF
+      IF (RHO1D(I)<0.0 .OR. RHO1D(I) > 1.6 )THEN
+            print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&
+            ITER-ITMAX," ITERATIONS",I,J, "rho: ",RHO1D(I)
+            yesno = 1
+      ENDIF
+      IF (QSFC(I)*1000. <0.0 .OR. QSFC(I)*1000. >40.)THEN
+            print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&
+            ITER-ITMAX," ITERATIONS",I,J, "QSFC: ",QSFC(I)
+            yesno = 1
+      ENDIF
+      IF (PBLH(I)<0. .OR. PBLH(I)>6000.)THEN
+            print*,"SUSPICIOUS VALUES IN MYNN SFCLAYER",&                                                              
+            ITER-ITMAX," ITERATIONS",I,J, "PBLH: ",PBLH(I)
+            yesno = 1
+      ENDIF
+
+      IF (yesno == 1) THEN
+        print*," OTHER INFO:"
+        write(*,1001)"REGIME:",REGIME(I)," z/L:",ZOL(I)," U*:",UST(I),&
+              " Tstar:",MOL(I)
+        write(*,1002)"PSIM:",PSIM(I)," PSIH:",PSIH(I)," W*:",WSTAR(I),&
+              " DTHV:",THV1D(I)-THVGB(I)
+        write(*,1003)"CPM:",CPM(I)," RHO1D:",RHO1D(I)," L:",&
+              ZOL(I)/ZA(I)," DTH:",TH1D(I)-THGB(I)
+        write(*,1004)"Z0/Zt:",zratio(I)," Z0:",ZNT(I)," Zt:",z_t(I),&
+              " za:",za(I)
+        write(*,1005)"Re:",restar," MAVAIL:",MAVAIL(I)," QSFC(I):",&
+              QSFC(I)," QVSH(I):",QVSH(I)
+        print*,"PSIX=",PSIX," Z0:",ZNT(I)," T1D(i):",T1D(i)
+        write(*,*)"============================================="
+      ENDIF
    ENDIF
 
  ENDDO !end i-loop

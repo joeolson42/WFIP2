@@ -277,7 +277,13 @@ CONTAINS
                 ,NSSL_CNOHL=config_flags%nssl_cnohl                  &  !  gthompsn
                 ,NSSL_RHO_QH=config_flags%nssl_rho_qh                &  !  gthompsn
                 ,NSSL_RHO_QHL=config_flags%nssl_rho_qhl              &  !  gthompsn
+                ,SFCRUNOFF=grid%sfcrunoff,UDRUNOFF=grid%udrunoff     &
+                ,ACRUNOFF=grid%acrunoff                              &
                 ,SNOWNCV=grid%snowncv, SNOW_ACC_NC=grid%snow_acc_nc  &    
+                ,GRAUP_ACC_NC=grid%graup_acc_nc                      &
+                ,GRAUPELNCV=grid%graupelncv                          &
+                ,ACSNOW=grid%acsnow                                  &
+                ,ACGRAUP=grid%acgraup                                &
                 ,PREC_ACC_C=grid%prec_acc_c                          &
                 ,PREC_ACC_NC=grid%prec_acc_nc                        &
                 ,PREC_ACC_DT=config_flags%prec_acc_dt                &
@@ -392,9 +398,15 @@ CONTAINS
                 ,NSSL_CNOHL=config_flags%nssl_cnohl                  &  !  gthompsn
                 ,NSSL_RHO_QH=config_flags%nssl_rho_qh                &  !  gthompsn
                 ,NSSL_RHO_QHL=config_flags%nssl_rho_qhl              &  !  gthompsn
+                ,SFCRUNOFF=grid%sfcrunoff,UDRUNOFF=grid%udrunoff     &
+                ,ACRUNOFF=grid%acrunoff                              &
                 ,SNOWNCV=grid%snowncv, SNOW_ACC_NC=grid%snow_acc_nc  &    
+                ,GRAUP_ACC_NC=grid%graup_acc_nc                      &
+                ,GRAUPELNCV=grid%graupelncv                          &
                 ,PREC_ACC_C=grid%prec_acc_c                          &
                 ,PREC_ACC_NC=grid%prec_acc_nc                        &
+                ,ACSNOW=grid%acsnow                                  &
+                ,ACGRAUP=grid%acgraup                                &
                 ,PREC_ACC_DT=config_flags%prec_acc_dt                &
                 ,CURR_SECS2=curr_secs2                               &
                 ,NWP_DIAGNOSTICS=config_flags%nwp_diagnostics        &
@@ -484,7 +496,13 @@ CONTAINS
                 ,NSSL_CNOHL=config_flags%nssl_cnohl                  &  !  gthompsn
                 ,NSSL_RHO_QH=config_flags%nssl_rho_qh                &  !  gthompsn
                 ,NSSL_RHO_QHL=config_flags%nssl_rho_qhl              &  !  gthompsn
+                ,SFCRUNOFF=grid%sfcrunoff,UDRUNOFF=grid%udrunoff     &
+                ,ACRUNOFF=grid%acrunoff                              &
                 ,SNOWNCV=grid%snowncv, SNOW_ACC_NC=grid%snow_acc_nc  &    
+                ,GRAUP_ACC_NC=grid%graup_acc_nc                      &
+                ,GRAUPELNCV=grid%graupelncv                          &
+                ,ACSNOW=grid%acsnow                                  &
+                ,ACGRAUP=grid%acgraup                                &
                 ,PREC_ACC_C=grid%prec_acc_c                          &
                 ,PREC_ACC_NC=grid%prec_acc_nc                        &
                 ,PREC_ACC_DT=config_flags%prec_acc_dt                &
@@ -575,7 +593,13 @@ CONTAINS
                 ,NSSL_CNOHL=config_flags%nssl_cnohl                  &  !  gthompsn
                 ,NSSL_RHO_QH=config_flags%nssl_rho_qh                &  !  gthompsn
                 ,NSSL_RHO_QHL=config_flags%nssl_rho_qhl              &  !  gthompsn
+                ,SFCRUNOFF=grid%sfcrunoff,UDRUNOFF=grid%udrunoff     &
+                ,ACRUNOFF=grid%acrunoff                              &
                 ,SNOWNCV=grid%snowncv, SNOW_ACC_NC=grid%snow_acc_nc  &    
+                ,GRAUP_ACC_NC=grid%graup_acc_nc                      &
+                ,GRAUPELNCV=grid%graupelncv                          &
+                ,ACSNOW=grid%acsnow                                  &
+                ,ACGRAUP=grid%acgraup                                &
                 ,PREC_ACC_C=grid%prec_acc_c                          &
                 ,PREC_ACC_NC=grid%prec_acc_nc                        &
                 ,PREC_ACC_DT=config_flags%prec_acc_dt                &
@@ -666,7 +690,13 @@ CONTAINS
                 ,NSSL_CNOHL=config_flags%nssl_cnohl                  &  !  gthompsn
                 ,NSSL_RHO_QH=config_flags%nssl_rho_qh                &  !  gthompsn
                 ,NSSL_RHO_QHL=config_flags%nssl_rho_qhl              &  !  gthompsn
+                ,SFCRUNOFF=grid%sfcrunoff,UDRUNOFF=grid%udrunoff     &
+                ,ACRUNOFF=grid%acrunoff                              &
                 ,SNOWNCV=grid%snowncv, SNOW_ACC_NC=grid%snow_acc_nc  &    
+                ,GRAUP_ACC_NC=grid%graup_acc_nc                      &
+                ,GRAUPELNCV=grid%graupelncv                          &
+                ,ACSNOW=grid%acsnow                                  &
+                ,ACGRAUP=grid%acgraup                                &
                 ,PREC_ACC_C=grid%prec_acc_c                          &
                 ,PREC_ACC_NC=grid%prec_acc_nc                        &
                 ,PREC_ACC_DT=config_flags%prec_acc_dt                &
@@ -788,7 +818,13 @@ CONTAINS
                 ,NSSL_CNOHL=config_flags%nssl_cnohl                  &  !  gthompsn
                 ,NSSL_RHO_QH=config_flags%nssl_rho_qh                &  !  gthompsn
                 ,NSSL_RHO_QHL=config_flags%nssl_rho_qhl              &  !  gthompsn
+                ,SFCRUNOFF=grid%sfcrunoff,UDRUNOFF=grid%udrunoff     &
+                ,ACRUNOFF=grid%acrunoff                              &
                 ,SNOWNCV=grid%snowncv, SNOW_ACC_NC=grid%snow_acc_nc  &    
+                ,GRAUP_ACC_NC=grid%graup_acc_nc                      &
+                ,GRAUPELNCV=grid%graupelncv                          &
+                ,ACSNOW=grid%acsnow                                  &
+                ,ACGRAUP=grid%acgraup                                &
                 ,PREC_ACC_C=grid%prec_acc_c                          &
                 ,PREC_ACC_NC=grid%prec_acc_nc                        &
                 ,PREC_ACC_DT=config_flags%prec_acc_dt                &

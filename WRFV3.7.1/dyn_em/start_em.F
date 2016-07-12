@@ -229,6 +229,7 @@
 !            grid%graup_acc_nc(i,j)  = 0.
             grid%sfcrunoff  (i,j) = 0.
             grid%udrunoff   (i,j) = 0.
+            grid%acrunoff   (i,j) = 0.
        ENDDO
        ENDDO
     endif

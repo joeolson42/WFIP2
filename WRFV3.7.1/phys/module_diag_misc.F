@@ -177,6 +177,9 @@ CONTAINS
                      ,nssl_rho_qh, nssl_rho_qhl                       &
                      ,nssl_alphah, nssl_alphahl                       &
                      ,prec_acc_c, prec_acc_nc, snow_acc_nc            &
+                     ,graup_acc_nc, graupelncv                        &
+                     ,acsnow, acgraup, acrunoff                       &
+                     ,sfcrunoff, udrunoff                             &
                      ,snowncv, prec_acc_dt, curr_secs2                &
                      ,nwp_diagnostics, diagflag                       &
                      ,history_interval                                &
@@ -309,6 +312,7 @@ CONTAINS
                                                     ,   RAINNCV  &
                                                     ,    RAINCV  &
                                                     ,   SNOWNCV  &
+                                                    ,GRAUPELNCV  &
                                                     ,       HFX  &
                                                     ,        LH  &
                                                     ,    SFCEVP  &  
@@ -342,7 +346,14 @@ CONTAINS
                       I_ACLWUPB,I_ACLWUPBC,I_ACLWDNB,I_ACLWDNBC
 
    REAL, DIMENSION( ims:ime, jms:jme ), OPTIONAL, INTENT(INOUT) ::&
-                      PREC_ACC_C, PREC_ACC_NC, SNOW_ACC_NC
+                      PREC_ACC_C, PREC_ACC_NC, SNOW_ACC_NC        &
+                                                   , GRAUP_ACC_NC &
+                                                   , ACSNOW       &
+                                                   , ACGRAUP      &
+                                                   , ACRUNOFF     &
+                                                   , SFCRUNOFF    &
+                                                   , UDRUNOFF
+
 
    REAL, OPTIONAL, INTENT(IN)::  PREC_ACC_DT, CURR_SECS2
 
@@ -580,17 +591,28 @@ CONTAINS
             prec_acc_c(i,j)  = 0.
             prec_acc_nc(i,j) = 0.
             snow_acc_nc(i,j)  = 0.
+            graup_acc_nc(i,j) = 0.
+            sfcrunoff  (i,j) = 0.
+            udrunoff   (i,j) = 0.
          ENDIF
          prec_acc_c(i,j)  = prec_acc_c(i,j)  +  RAINCV(i,j)
          prec_acc_nc(i,j) = prec_acc_nc(i,j) + RAINNCV(i,j)
          prec_acc_c(i,j)  = MAX (prec_acc_c(i,j), 0.0)
          prec_acc_nc(i,j) = MAX (prec_acc_nc(i,j), 0.0)
          snow_acc_nc(i,j)   = snow_acc_nc(i,j) + SNOWNCV(I,J)
+         acsnow(i,j) = acsnow(i,j) + SNOWNCV(I,J)
+         graup_acc_nc(i,j)  = graup_acc_nc(i,j) + graupelncv(i,j)
+         acgraup(i,j) = acgraup(i,j) + graupelncv(i,j)
 ! add convective precip to snow bucket if t2 < 273.15
          IF ( t2(i,j) .lt. 273.15 ) THEN
          snow_acc_nc(i,j)   = snow_acc_nc(i,j) +  RAINCV(i,j)
-         snow_acc_nc(i,j)   = MAX (snow_acc_nc(i,j), 0.0)
+         acsnow(i,j) = acsnow(i,j) + RAINCV(i,j)
          ENDIF
+         snow_acc_nc(i,j)   = MAX (snow_acc_nc(i,j), 0.0)
+         graup_acc_nc(i,j)  = MAX (graup_acc_nc(i,j), 0.0)
+         acsnow(i,j) = MAX (acsnow(i,j), 0.0)
+         acgraup(i,j)= MAX (acgraup(i,j), 0.0)
+
       ENDDO     
       ENDDO     
 

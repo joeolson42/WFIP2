@@ -68,7 +68,7 @@ CONTAINS
                    CP,ROVCP,G0,LV,STBOLT,                        &
                    SOILMOIS,SH2O,SMAVAIL,SMMAX,                  &
                    TSO,SOILT,HFX,QFX,LH,                         &
-                   SFCRUNOFF,UDRUNOFF,SFCEXC,                    &
+                   SFCRUNOFF,UDRUNOFF,ACRUNOFF,SFCEXC,           &
                    SFCEVP,GRDFLX,SNOWFALLAC,ACSNOW,SNOM,         &
                    SMFR3D,KEEPFR3DFLAG,                          &
                    myj,shdmin,shdmax,rdlai2d,                    &
@@ -133,6 +133,7 @@ CONTAINS
 !-- LH          upward latent heat flux (W/m^2)
 !   SFCRUNOFF - ground surface runoff [mm]
 !   UDRUNOFF - underground runoff [mm]
+!   ACRUNOFF - run-total surface runoff [mm]
 !   SFCEVP - total evaporation in [kg/m^2]
 !   GRDFLX - soil heat flux (W/m^2: negative, if downward from surface)
 !   SNOWFALLAC - run-total snowfall accumulation [mm]   
@@ -246,6 +247,7 @@ CONTAINS
                                                          SFCEVP, &
                                                       SFCRUNOFF, &
                                                        UDRUNOFF, &
+                                                       ACRUNOFF, &
                                                          GRDFLX, &
                                                          ACSNOW, &
                                                            SNOM, &
@@ -483,6 +485,7 @@ CONTAINS
            RUNOFF2(i,j) = 0.
            SFCRUNOFF(i,j) = 0.
            UDRUNOFF(i,j) = 0.
+           ACRUNOFF(i,j) = 0.
            emissl (i,j) = 0.
            budget(i,j) = 0.
            acbudget(i,j) = 0.
@@ -1017,6 +1020,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !--- Convert the water unit into mm
         SFCRUNOFF(I,J) = SFCRUNOFF(I,J)+RUNOFF1(I,J)*DT*1000.0
         UDRUNOFF (I,J) = UDRUNOFF(I,J)+RUNOFF2(I,J)*DT*1000.0
+        ACRUNOFF(I,J)  = ACRUNOFF(I,J)+RUNOFF1(I,J)*DT*1000.0
         SMAVAIL  (I,J) = SMAVAIL(I,J) * 1000.
         SMMAX    (I,J) = SMMAX(I,J) * 1000.
         smtotold (I,J) = smtotold(I,J) * 1000.
@@ -1465,10 +1469,10 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
         BSN=delt/3600.*c1sn*exp(0.08*min(0.,tsnav)-c2sn*rhosn*1.e-3)
        if(bsn*snwe*100..lt.1.e-4) goto 777
         XSN=rhosn*(exp(bsn*snwe*100.)-1.)/(bsn*snwe*100.)
-!        rhosn=MIN(MAX(76.9,XSN),500.)
+        rhosn=MIN(MAX(76.9,XSN),500.)
 !        rhosn=MIN(MAX(62.5,XSN),890.)
 !        rhosn=MIN(MAX(100.,XSN),400.)
-        rhosn=MIN(MAX(50.,XSN),400.)
+!        rhosn=MIN(MAX(50.,XSN),400.)
  777   continue
 
 !      else
@@ -1519,9 +1523,9 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !*** without snow melt )
          xsn=(rhosn*snwe+rhonewsn*newsn)/                         &
              (snwe+newsn)
-!         rhosn=MIN(MAX(76.9,XSN),500.)
+         rhosn=MIN(MAX(76.9,XSN),500.)
 !         rhosn=MIN(MAX(100.,XSN),500.)
-         rhosn=MIN(MAX(50.,XSN),400.)
+!         rhosn=MIN(MAX(50.,XSN),400.)
 
 !Update snow on the ground
 !         snwe=snwe+newsn
@@ -4397,7 +4401,7 @@ print *, 'TSO before calling SNOWTEMP: ', tso
 
          xsn=(rhosn*(snwe-rsm)+1.e3*rsm)/                            &
              snwe
-         rhosn=MIN(MAX(50.,XSN),400.)
+         rhosn=MIN(MAX(76.9,XSN),500.)
 
         RHOCSN=2090.* RHOSN
         thdifsn = 0.265/RHOCSN
@@ -5553,7 +5557,7 @@ print *, 'SNOWTEMP: SNHEI,SNTH,SOILT1: ',SNHEI,SNTH,SOILT1,soilt
 !*** Eq. 9 (with my correction) in Koren et al. (1999)
           xsn=(rhosn*(snwe-rsm)+1.e3*rsm)/                            &
               snwe
-          rhosn=MIN(MAX(50.,XSN),400.)
+          rhosn=MIN(MAX(76.9,XSN),500.)
 
           RHOCSN=2090.* RHOSN
           thdifsn = 0.265/RHOCSN

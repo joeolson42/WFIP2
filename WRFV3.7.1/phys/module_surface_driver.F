@@ -25,7 +25,7 @@ CONTAINS
 #else
      &          ,psim,p_phy,q10,q2,qfx,qsfc,qshltr,qz0                &
 #endif
-     &          ,raincv,rho,sfcevp,sfcexc,sfcrunoff                   &
+     &          ,raincv,rho,sfcevp,sfcexc,sfcrunoff ,acrunoff         &
      &          ,smois,smstav,smstot,snoalb,snow,snowc,snowh,stepbl   &
      &          ,smcrel                                               &
      &          ,th10,th2,thz0,th_phy,tmn,tshltr,tsk,tslb             &
@@ -657,6 +657,7 @@ CONTAINS
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   QSFC
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   QZ0
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   SFCRUNOFF
+   REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   ACRUNOFF
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   SMSTAV
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   SMSTOT
    REAL, DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   SNOW
@@ -3146,7 +3147,7 @@ CONTAINS
                 iswater,isice,xice,xice_threshold,              &
                 cp ,rovcp,g,xlv,stbolt,                         &
                 smois,sh2o,smstav,smstot,tslb,tsk,hfx,qfx,lh,   &
-                sfcrunoff,udrunoff,sfcexc,                      &
+                sfcrunoff,udrunoff,acrunoff,sfcexc,             &
                 sfcevp,grdflx,snowfallac,acsnow,acsnom,         &
                 smfr3d,keepfr3dflag,                            &
                 myj,shdmin,shdmax,rdlai2d,                      &

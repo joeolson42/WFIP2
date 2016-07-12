@@ -6113,6 +6113,8 @@ END SUBROUTINE set_tend
        dflux_x_p1, dflux_y_p1,  &
        tendency_x, tendency_y,  &
        mu_avg_p0, mu_avg_p1,    &
+       diff_6th_coef_x, &
+       diff_6th_coef_y, &
        diff_6th_coef
 
     LOGICAL  &
@@ -6137,6 +6139,12 @@ END SUBROUTINE set_tend
 ! diffusion for a given coefficient.
 
     diff_6th_coef = diff_6th_factor * 0.015625 / ( 2.0 * dt )  
+    diff_6th_coef_x = diff_6th_coef
+    diff_6th_coef_y = diff_6th_coef
+    slopedamp=1.
+    dx=1./rdx
+    dzthresh = config_flags%diff_6th_thresh*9.81*dx
+
 
 ! End: Translate diffusion factor.
 !------------------------------------------------------------------------------
@@ -6185,6 +6193,7 @@ END SUBROUTINE set_tend
       k_end   = ktf
  
     ENDIF
+!  print *,'i_start,i_end,j_start,j_end',i_start,i_end,j_start,j_end
 
 ! End: Assignment of limits of spatial loops.
 !------------------------------------------------------------------------------
@@ -6212,8 +6221,6 @@ END SUBROUTINE set_tend
       !JOE-add slope dependence. Threshold is converted from slope (dy/dx) 
       !    to dy (meters)
       IF (config_flags%diff_6th_slopeopt .ge. 1) THEN
-         dx=1./rdx
-         dzthresh = config_flags%diff_6th_thresh*9.81*dx
          IF      ( name .EQ. 'u' ) THEN
            dzmax =            ABS(ght(i-1,k,j  ) - ght(i  ,k,j  ))
            dzmax = MAX(dzmax, ABS(ght(i  ,k,j  ) - ght(i+1,k,j  )))
@@ -6227,9 +6234,10 @@ END SUBROUTINE set_tend
            dzmax = MAX(dzmax, ABS(ght(i  ,k,j  ) - ght(i+1,k,j  )))
          END IF
          slopedamp = MAX(1.- (dzmax/dzthresh) ,0.)
-         diff_6th_coef = diff_6th_coef*slopedamp
-         !if (k==1 .AND. dzmax>dzthresh)print*,i,j,"max dz in x:",dzmax/9.81," m"
+         diff_6th_coef_x = diff_6th_coef*slopedamp
+         !if (k==1 .AND.i==676.and.j==542.and.dzmax>dzthresh)print*,i,j,"max dz in x:",dzmax/9.81," m ","name=",name
          !if (k==1)print*,i,j," dzmax:",dzmax/9.81," m, slopedamp:",slopedamp
+         !if (k==1.and.i==676.and.j==542)print*,i,j,"diff_6th_coef_x=",diff_6th_coef_x
       ENDIF
       !JOE-end
 
@@ -6273,7 +6281,7 @@ END SUBROUTINE set_tend
                     mu(i+1,j) )
       END IF
  
-      tendency_x = diff_6th_coef *  &
+      tendency_x = diff_6th_coef_x *  &
                  ( ( mu_avg_p1 * dflux_x_p1 ) - ( mu_avg_p0 * dflux_x_p0 ) )
  
 ! End: Diffusion in x.
@@ -6322,10 +6330,12 @@ END SUBROUTINE set_tend
            dzmax = MAX(dzmax, ABS(ght(i  ,k,j  ) - ght(i  ,k,j+1)))
          END IF
          slopedamp = MAX(1.- (dzmax/dzthresh) ,0.)
-         diff_6th_coef = diff_6th_coef*slopedamp
-         !if (k==1 .AND. dzmax>dzthresh)print*,i,j,"max dz in y:",dzmax/9.81," m"
-      ENDIF
-      !JOE-end
+         diff_6th_coef_y = diff_6th_coef*slopedamp
+         !if (k==1.and.i==676.and.j==542)print*,i,j,"max dz in y:",dzmax/9.81," m ","name=",name
+         !if (k==1.and.i==676.and.j==542)print*,i,j," dzmax:",dzmax/9.81," m, slopedamp:",slopedamp
+         !if (k==1.and.i==676.and.j==542)print*,i,j,"diff_6th_coef_y=",diff_6th_coef_y
+
+      ENDIF !JOE-end
 
 ! Apply 6th-order diffusion in y direction.
  
@@ -6352,7 +6362,7 @@ END SUBROUTINE set_tend
                     mu(i,j+1) )
       END IF
  
-      tendency_y = diff_6th_coef *  &
+      tendency_y = diff_6th_coef_y *  &
                  ( ( mu_avg_p1 * dflux_y_p1 ) - ( mu_avg_p0 * dflux_y_p0 ) )
  
 ! End: Diffusion in y.
