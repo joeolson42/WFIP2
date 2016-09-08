@@ -110,7 +110,7 @@ MODULE module_bl_mynn
 
 ! Constants for min tke in elt integration (qmin), max z/L in els (zmax), 
 ! and factor for eddy viscosity for TKE (Kq = Sqfac*Km):
-  REAL, PARAMETER :: qmin=0.0, zmax=1.0, Sqfac=3.0
+  REAL, PARAMETER :: qmin=0.0, zmax=2.0, Sqfac=3.0
 ! Note that the following mixing-length constants are now specified in mym_length
 !      &cns=3.5, alp1=0.23, alp2=0.3, alp3=3.0, alp4=10.0, alp5=0.4
 
@@ -681,10 +681,10 @@ CONTAINS
     ELSEIF ( bl_mynn_mixlength .GE. 2 ) THEN
        cns  = 2.7
        alp1 = 0.23
-       alp2 = 0.3
+       alp2 = 0.25
        alp3 = 3.0
        alp4 = 10.
-       alp5 = 0.4
+       alp5 = 0.2
     ENDIF
 
 !    tv0 = 0.61*tref
@@ -771,10 +771,10 @@ CONTAINS
            elb_mf = alp2*qkw(k) / bv &
                 &       *( 1.0 + alp3/alp2*&
                 &SQRT( vsc/( bv*elt ) ) )
-           tau_cloud = MIN(MAX(0.5*zi/((gtr*zi*MAX(flt,1.0e-4))**(1.0/3.0)), 100.),300.)
+           tau_cloud = MIN(MAX(0.5*zi/((gtr*zi*MAX(flt,1.0e-4))**(1.0/3.0)), 10.),100.)
            !minimize influence of surface heat flux on tau far away from the PBLH.
            wt=.5*TANH((zwk - (zi2+h1))/h2) + .5
-           tau_cloud = tau_cloud*(1.-wt) + 100.*wt        
+           tau_cloud = tau_cloud*(1.-wt) + 50.*wt        
            elb_cloud = MIN(tau_cloud*SQRT(MIN(qtke(k),16.)), zwk)
            elb = MIN(alp2*qkw(k)/bv, zwk)
            elf = elb
@@ -806,10 +806,11 @@ CONTAINS
            ! by zi, and zero is replaced by 1.0e-4 to
            ! prevent division by zero.
 
-           tau_cloud = MIN(MAX(0.5*zi/((gtr*zi*MAX(flt,1.0e-4))**(1.0/3.0)),200.),300.)
+           tau_cloud = MIN(MAX(0.5*zi/((gtr*zi*MAX(flt,1.0e-4))**(1.0/3.0)),10.),100.)
            !minimize influence of surface heat flux on tau far away from the PBLH.
            wt=.5*TANH((zwk - (zi2+h1))/h2) + .5
-           tau_cloud = tau_cloud*(1.-wt) + 100.*wt
+           tau_cloud = tau_cloud*(1.-wt) + 50.*wt
+
            elb_cloud = MIN(tau_cloud*SQRT(MIN(qtke(k),20.)), zwk)
            elb = elb_cloud
            elf = elb_cloud
@@ -828,13 +829,13 @@ CONTAINS
 
 !   **  Length scale in the surface layer  **
        IF ( rmo .GT. 0.0 ) THEN
-         IF ( bl_mynn_mixlength .LE. 1 ) THEN
+         !IF ( bl_mynn_mixlength .LE. 1 ) THEN
            els  = vk*zwk/(1.0+cns*MIN( zwk*rmo, zmax ))
            els1 = vk*z_m/(1.0+cns*MIN( zwk*rmo, zmax ))
-         ELSE
-           els  = vk*zwk/(1.0+cns*MIN( zwk1*rmo, zmax ))
-           els1 = vk*z_m/(1.0+cns*MIN( zwk1*rmo, zmax ))
-         ENDIF
+         !ELSE
+         !  els  = vk*zwk/(1.0+cns*MIN( zwk1*rmo, zmax ))
+         !  els1 = vk*z_m/(1.0+cns*MIN( zwk1*rmo, zmax ))
+         !ENDIF
        ELSE
           els  =  vk*zwk*( 1.0 - alp4* zwk*rmo )**0.2
           els1 =  vk*z_m*( 1.0 - alp4* zwk*rmo )**0.2
@@ -2109,7 +2110,7 @@ CONTAINS
 !
 
     REAL :: p2a,qsl,esat,qsat,tlk,qsat_tl,dqsl,cld0,q1k,eq1,qll,&
-         &q2p,pt,rac,qt,t,xl,rsl,cpm,cdhdz,fng,qww,alpha,beta,bb,ls,wt
+         &q2p,pt,rac,qt,t,xl,rsl,cpm,cdhdz,fng,qww,alpha,beta,bb,ls_min,ls,wt
     INTEGER :: i,j,k
 
     REAL :: erf
@@ -2230,18 +2231,25 @@ CONTAINS
                                                 ! in CB02
 
           zagl = zagl + dz(k)
-          ls = MIN(MAX(zagl,25.),100.) !let this be the minimum possible ls
-          !ls = MIN(el(k),300.)
-          lfac=MIN(2.25+dx/4000.,4.)
-          ls = MAX(MIN(lfac*el(k),500.),ls)
-                  ! CB02 use 900 m as a (constant) free-atmosphere length scale. 
-                  ! The form above was selected based on HRRR tests.
+          ls_min = MIN(MAX(zagl,25.),300.) ! Let this be the minimum possible length scale:
+                                       !   25 m < ls_min(=zagl) < 300 m
+          lfac=MIN(4.25+dx/4000.,6.)   ! A dx-dependent multiplier for the master length scale:
+                                       !   lfac(750 m) = 4.4
+                                       !   lfac(3 km)  = 5.0
+                                       !   lfac(13 km) = 6.0
+          ls = MAX(MIN(lfac*el(k),900.),ls_min)  ! Bounded:  ls_min < ls < 900 m
+                  ! Note: CB02 use 900 m as a constant free-atmosphere length scale. 
 
-          sgm(k) = MAX(1.e-10, 0.2*ls*SQRT(MAX(0., & ! Eq. 9 in CB02:
+                  ! Above 300 m AGL, ls_min remains 300 m.  For dx = 3 km, the 
+                  ! MYNN master length scale (el) must exceed 60 m before ls
+                  ! becomes responsive to el, otherwise ls = ls_min = 300 m.
+
+          sgm(k) = MAX(1.e-10, 0.225*ls*SQRT(MAX(0., & ! Eq. 9 in CB02:
                   & (a(k)*dqw/dzk)**2              & ! < 1st term in brackets,
                   & -2*a(k)*b(k)*cdhdz*dqw/dzk     & ! < 2nd term,
                   & +b(k)**2 * cdhdz**2)))           ! < 3rd term
-                  ! Per CB02, 0.2 is chosen as a constant.
+                  ! CB02 use a multiplier of 0.2, but 0.225 is chosen
+                  ! based on tests
 
           q1(k) = qmq(k) / sgm(k)  ! Q1, the normalized saturation
 
@@ -4057,8 +4065,8 @@ ENDIF
     !LOCAL VARS
     REAL ::  PBLH_TKE,qtke,qtkem1,wt,maxqke,TKEeps,minthv
     REAL :: delt_thv   !delta theta-v; dependent on land/sea point
-    REAL, PARAMETER :: sbl_lim  = 400. !200. !upper limit of stable BL height (m).
-    REAL, PARAMETER :: sbl_damp = 800.!400. !transition length for blending (m).
+    REAL, PARAMETER :: sbl_lim  = 250. !200. !upper limit of stable BL height (m).
+    REAL, PARAMETER :: sbl_damp = 500. !400. !transition length for blending (m).
     INTEGER :: I,J,K,kthv,ktke,kzi,kzi2
 
     !ADD KPBL (kzi) for coupling to some Cu schemes, initialize at k=2                                  
@@ -4066,7 +4074,7 @@ ENDIF
     kzi = 2
     kzi2= 2
 
-    !FIND MAX TKE AND MIN THETAV IN THE LOWEST 500 M
+    !FIND MAX TKE AND MIN THETAV IN THE LOWEST 250 M
     k = kts+1
     kthv = 1
     ktke = 1

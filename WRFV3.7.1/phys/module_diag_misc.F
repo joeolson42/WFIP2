@@ -169,6 +169,7 @@ CONTAINS
                      ,I_ACLWUPB,I_ACLWUPBC,I_ACLWDNB,I_ACLWDNBC       & ! Optional
                      ,dt,xtime,sbw,t2                                 &
                      ,diag_print                                      &
+                     ,dfi_stage                                       &
                      ,bucket_mm, bucket_J                             &
                      ,mphysics_opt                                    &
                      ,gsfcgce_hail, gsfcgce_2ice                      &
@@ -189,6 +190,7 @@ CONTAINS
                      ,wspd10max                                       &
                      ,wspd10,wspd80,LWP,IWP,maxcldfra,shear100,dt100  &
                      ,up_heli_max                                     &
+                     ,up_heli_max16                                   &
                      ,w_up_max,w_dn_max                               &
                      ,znw,w_colmean                                   &
                      ,numcolpts,w_mean                                &
@@ -211,6 +213,7 @@ CONTAINS
       MORR_TWO_MOMENT, GSFCGCESCHEME, WDM5SCHEME, WDM6SCHEME,           &
       NSSL_2MOM, NSSL_2MOMCCN, NSSL_1MOM, NSSL_1MOMLFO,                 &
       MILBRANDT2MOM , CAMMGMPSCHEME, FAST_KHAIN_LYNN, FULL_KHAIN_LYNN    !,MILBRANDT3MOM, NSSL_3MOM
+  USE module_configure
 
    IMPLICIT NONE
 !======================================================================
@@ -293,6 +296,8 @@ CONTAINS
      &           i_start,i_end,j_start,j_end
 
    INTEGER,      INTENT(IN   )    ::   diag_print
+   INTEGER,      INTENT(IN   )    ::   dfi_stage
+
    REAL,      INTENT(IN   )    ::   bucket_mm, bucket_J
    INTEGER,   INTENT(IN   )    ::   mphysics_opt
    INTEGER, INTENT(IN) :: gsfcgce_hail, gsfcgce_2ice, mpuse_hail
@@ -406,6 +411,7 @@ CONTAINS
    REAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT) ::        &
                                                       wspd10max  &
                                                    ,up_heli_max  &
+                                                 ,up_heli_max16  &
                                              ,w_up_max,w_dn_max  &
                                     ,w_colmean,numcolpts,w_mean  &
                                           ,grpl_max,grpl_colint  &
@@ -420,7 +426,7 @@ CONTAINS
 
    INTEGER :: idump
 
-   REAL :: wind_vel
+   REAL :: uh, vh, wind_vel
    REAL :: depth
 
       DOUBLE PRECISION:: hail_max
@@ -650,6 +656,7 @@ CONTAINS
        DO i=i_start(ij),i_end(ij)
          wspd10max(i,j)   = 0.
          up_heli_max(i,j) = 0.
+         up_heli_max16(i,j) = 0.
          w_up_max(i,j)    = 0.
          w_dn_max(i,j)    = 0.
          w_mean(i,j)      = 0.
@@ -742,7 +749,11 @@ CONTAINS
 
 ! Calculate the max 10 m wind speed between output times
 
-       wind_vel = sqrt ( u10(i,j)*u10(i,j) + v10(i,j)*v10(i,j) )
+!tgs       wind_vel = sqrt ( u10(i,j)*u10(i,j) + v10(i,j)*v10(i,j) )
+       uh=0.5*(u_phy(i,1,j)+u_phy(i+1,1,j))
+       vh=0.5*(v_phy(i,1,j)+v_phy(i,1,j+1))
+       wind_vel = sqrt( uh*uh + vh*vh )
+
        IF ( wind_vel .GT. wspd10max(i,j) ) THEN
          wspd10max(i,j) = wind_vel
        ENDIF
@@ -1350,12 +1361,20 @@ CONTAINS
 
    IF ( xtime .ne. 0. ) THEN
 
-    if(diag_print.eq.1) then
-       prfreq = dt
+!    if(diag_print.eq.1) then
+!       prfreq = dt
 !      prfreq = max(2,int(dt/60.))   ! in min
+!    else
+!       prfreq=10                   ! in min
+!    endif
+
+     if(dfi_stage /= DFI_FST) then
+!tgs - frequency for DFI backward and forward integration
+        prfreq = max(2,int(dt/60.))   ! in min
     else
-       prfreq=10                   ! in min
+       prfreq=30                   ! in min
     endif
+
    
     IF (MOD(nint(dt),prfreq) == 0) THEN
 
@@ -1471,9 +1490,12 @@ CONTAINS
 #ifdef DM_PARALLEL
    IF ( wrf_dm_on_monitor() ) THEN
 #endif
-     WRITE(outstring,*) grid_str,'Domain average of dpsdt, dmudt (mb/3h): ', xtime, &
-           dpsdt_sum/no_points*108., &
-           dmudt_sum/no_points*108.
+!     WRITE(outstring,*) grid_str,'Domain average of dpsdt, dmudt (mb/3h): ', xtime, &
+!           dpsdt_sum/no_points*108., &
+!           dmudt_sum/no_points*108.
+     WRITE(outstring,*) grid_str,'Dom. av. DELPMN,dmudt (mb/h): ', xtime, &
+           dpsdt_sum/no_points*36., &
+           dmudt_sum/no_points*36.
      CALL wrf_message ( TRIM(outstring) )
 
      WRITE(outstring,*) grid_str,'Max mu change time step: ', idp,jdp,dmumax

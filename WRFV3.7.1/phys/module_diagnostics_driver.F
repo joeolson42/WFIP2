@@ -265,6 +265,7 @@ CONTAINS
          ,I_ACLWDNB=grid%i_aclwdnb  ,I_ACLWDNBC=grid%i_aclwdnbc      &
       ! Selection flag 
                 ,DIAG_PRINT=config_flags%diag_print                  &
+                ,dfi_stage=grid%dfi_stage                            &
                 ,BUCKET_MM=config_flags%bucket_mm                    &
                 ,BUCKET_J =config_flags%bucket_J                     &
                 ,MPHYSICS_OPT=config_flags%mp_physics                &  !  gthompsn
@@ -301,6 +302,7 @@ CONTAINS
                 ,MAXCLDFRA=grid%maxcldfra                            & !joe-wfip
                 ,SHEAR100=grid%shear100,DT100=grid%DT100             & !joe-wfip
                 ,UP_HELI_MAX=grid%up_heli_max                        &
+                ,UP_HELI_MAX16=grid%up_heli_max16                    &
                 ,W_UP_MAX=grid%w_up_max,W_DN_MAX=grid%w_dn_max       &
                 ,ZNW=grid%znw,W_COLMEAN=grid%w_colmean               &
                 ,NUMCOLPTS=grid%numcolpts,W_MEAN=grid%w_mean         &
@@ -386,6 +388,7 @@ CONTAINS
          ,I_ACLWDNB=grid%i_aclwdnb  ,I_ACLWDNBC=grid%i_aclwdnbc      &
       ! Selection flag 
                 ,DIAG_PRINT=config_flags%diag_print                  &
+                ,dfi_stage=grid%dfi_stage                            &
                 ,BUCKET_MM=config_flags%bucket_mm                    &
                 ,BUCKET_J =config_flags%bucket_J                     &
                 ,MPHYSICS_OPT=config_flags%mp_physics                &  !  gthompsn
@@ -422,6 +425,7 @@ CONTAINS
                 ,MAXCLDFRA=grid%maxcldfra                            & !joe-wfip
                 ,SHEAR100=grid%shear100,DT100=grid%DT100             & !joe-wfip
                 ,UP_HELI_MAX=grid%up_heli_max                        &
+                ,UP_HELI_MAX16=grid%up_heli_max16                    &
                 ,W_UP_MAX=grid%w_up_max,W_DN_MAX=grid%w_dn_max       &
                 ,ZNW=grid%znw,W_COLMEAN=grid%w_colmean               &
                 ,NUMCOLPTS=grid%numcolpts,W_MEAN=grid%w_mean         &
@@ -484,6 +488,7 @@ CONTAINS
          ,I_ACLWDNB=grid%i_aclwdnb  ,I_ACLWDNBC=grid%i_aclwdnbc      &
       ! Selection flag 
                 ,DIAG_PRINT=config_flags%diag_print                  &
+                ,dfi_stage=grid%dfi_stage                            &
                 ,BUCKET_MM=config_flags%bucket_mm                    &
                 ,BUCKET_J =config_flags%bucket_J                     &
                 ,MPHYSICS_OPT=config_flags%mp_physics                &  !  gthompsn
@@ -514,6 +519,7 @@ CONTAINS
                 ,U10=grid%u10,V10=grid%v10,W=grid%w_2                &
                 ,WSPD10MAX=grid%wspd10max                            &
                 ,UP_HELI_MAX=grid%up_heli_max                        &
+                ,UP_HELI_MAX16=grid%up_heli_max16                    &
                 ,W_UP_MAX=grid%w_up_max,W_DN_MAX=grid%w_dn_max       &
                 ,ZNW=grid%znw,W_COLMEAN=grid%w_colmean               &
                 ,NUMCOLPTS=grid%numcolpts,W_MEAN=grid%w_mean         &
@@ -581,6 +587,7 @@ CONTAINS
          ,I_ACLWDNB=grid%i_aclwdnb  ,I_ACLWDNBC=grid%i_aclwdnbc      &
       ! Selection flag 
                 ,DIAG_PRINT=config_flags%diag_print                  &
+                ,dfi_stage=grid%dfi_stage                            &
                 ,BUCKET_MM=config_flags%bucket_mm                    &
                 ,BUCKET_J =config_flags%bucket_J                     &
                 ,MPHYSICS_OPT=config_flags%mp_physics                &  !  gthompsn
@@ -611,6 +618,7 @@ CONTAINS
                 ,U10=grid%u10,V10=grid%v10,W=grid%w_2                &
                 ,WSPD10MAX=grid%wspd10max                            &
                 ,UP_HELI_MAX=grid%up_heli_max                        &
+                ,UP_HELI_MAX16=grid%up_heli_max16                    &
                 ,W_UP_MAX=grid%w_up_max,W_DN_MAX=grid%w_dn_max       &
                 ,ZNW=grid%znw,W_COLMEAN=grid%w_colmean               &
                 ,NUMCOLPTS=grid%numcolpts,W_MEAN=grid%w_mean         &
@@ -678,6 +686,7 @@ CONTAINS
          ,I_ACLWDNB=grid%i_aclwdnb  ,I_ACLWDNBC=grid%i_aclwdnbc      &
       ! Selection flag 
                 ,DIAG_PRINT=config_flags%diag_print                  &
+                ,dfi_stage=grid%dfi_stage                            &
                 ,BUCKET_MM=config_flags%bucket_mm                    &
                 ,BUCKET_J =config_flags%bucket_J                     &
                 ,MPHYSICS_OPT=config_flags%mp_physics                &  !  gthompsn
@@ -708,6 +717,7 @@ CONTAINS
                 ,U10=grid%u10,V10=grid%v10,W=grid%w_2                &
                 ,WSPD10MAX=grid%wspd10max                            &
                 ,UP_HELI_MAX=grid%up_heli_max                        &
+                ,UP_HELI_MAX16=grid%up_heli_max16                    &
                 ,W_UP_MAX=grid%w_up_max,W_DN_MAX=grid%w_dn_max       &
                 ,ZNW=grid%znw,W_COLMEAN=grid%w_colmean               &
                 ,NUMCOLPTS=grid%numcolpts,W_MEAN=grid%w_mean         &
@@ -806,6 +816,7 @@ CONTAINS
          ,I_ACLWDNB=grid%i_aclwdnb  ,I_ACLWDNBC=grid%i_aclwdnbc      &
       ! Selection flag 
                 ,DIAG_PRINT=config_flags%diag_print                  &
+                ,dfi_stage=grid%dfi_stage                            &
                 ,BUCKET_MM=config_flags%bucket_mm                    &
                 ,BUCKET_J =config_flags%bucket_J                     &
                 ,MPHYSICS_OPT=config_flags%mp_physics                &  !  gthompsn
@@ -836,6 +847,7 @@ CONTAINS
                 ,U10=grid%u10,V10=grid%v10,W=grid%w_2                &
                 ,WSPD10MAX=grid%wspd10max                            &
                 ,UP_HELI_MAX=grid%up_heli_max                        &
+                ,UP_HELI_MAX16=grid%up_heli_max16                    &
                 ,W_UP_MAX=grid%w_up_max,W_DN_MAX=grid%w_dn_max       &
                 ,ZNW=grid%znw,W_COLMEAN=grid%w_colmean               &
                 ,NUMCOLPTS=grid%numcolpts,W_MEAN=grid%w_mean         &
