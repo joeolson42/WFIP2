@@ -6470,19 +6470,19 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
 !--- incoming solar function
 ! Noihlan & Planton (1988)
        f1=0.
-       fsol=rstbl(iland)/rsmax_data
-    if(lai > 0.01) then
-       f1 = 1.1/lai*gswin/rgltbl(iland)! f1=0. when GSWin=0.
-       fsol = (f1+rstbl(iland)/rsmax_data)/(1.+f1)
-       fsol=min(1.,fsol)
-    endif
+!       fsol=rstbl(iland)/rsmax_data
+!    if(lai > 0.01) then
+!       f1 = 1.1/lai*gswin/rgltbl(iland)! f1=0. when GSWin=0.
+!       fsol = (f1+rstbl(iland)/rsmax_data)/(1.+f1)
+!       fsol=min(1.,fsol)
+!    endif
 !     totcnd = max(lai/rstbl(iland), pctot * ftem * f1) 
 ! Mahrer & Avissar (1982), Avissar et al. (1985)
-!     if (GSWin < 100.) then
-!      fsol = 1. / (1. + exp(-0.034 * (GSWin - 3.5)))
-!     else
-!      fsol = 1.
-!     endif
+     if (GSWin < rgltbl(iland)) then
+      fsol = 1. / (1. + exp(-0.034 * (GSWin - 3.5)))
+     else
+      fsol = 1.
+     endif
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
 !    if (i==421.and.j==280) then
      print *,'i,j,GSWin,fsol',i,j,gswin,fsol
