@@ -286,7 +286,10 @@ CONTAINS
 
 ! wind is done separtely for wind_int
 !  IF (( MOD(NINT(curr_secs2/dt),NINT(wind_int*60./dt)) == 0) .AND. (.NOT.is_restart)) THEN
-  IF ((ABS( MOD(curr_secs2/dt,wind_int*60./dt)) < 0.01) .AND. (.NOT.is_restart)) THEN
+!print*,"curr_secs2=",curr_secs2," dt=",dt,"wind_it*60=",wind_int*60.
+!JOE- the second argument in the MOD function was resulting in a FPE - the REAL 
+!     function stopped this behavior.
+  IF ((ABS( MOD(curr_secs2/dt,REAL(wind_int)*60./dt)) < 0.01) .AND. (.NOT.is_restart)) THEN
 !    print *,'1 - initialization wind - xtime',xtime
     DO ij = 1 , num_tiles
       IF  ( wrf_dm_on_monitor() ) THEN

@@ -134,6 +134,7 @@ CONTAINS
               ,SF_SURFACE_PHYSICS, IS_CAMMGMP_USED                        & !fds
               ,EXPLICIT_CONVECTION                                        & ! .true.=no conv. scheme
               ,swddir,swddni,swddif                                       & ! jararias 2013/08
+              ,swddnic,swddifc                                            & ! J. Kenyon, 30 Sep 2016
               ,swdown_ref,swddir_ref,coszen_ref,Gx,gg,Bx,bb               &
               ,aer_type                                                   & ! jararias 2013/11
               ,aer_aod550_opt, aer_aod550_val                             &
@@ -543,7 +544,9 @@ CONTAINS
 ! ------------------------------------------------------------------------------ jararias 2013/08/10 -----------
    REAL, DIMENSION( ims:ime, jms:jme ),  INTENT(OUT) :: swddir, & ! All-sky SW broadband surface direct irradiance
                                                         swddni, & ! All-sky SW broadband surface direct normal irradiance
-                                                        swddif    ! All-sky SW broadband surface diffuse irradiance
+                                                        swddif, & ! All-sky SW broadband surface diffuse irradiance
+                                                        swddnic,& ! Clear-sky SW broadband surface direct normal irradiance:  J. Kenyon, 30 Sep 2016
+                                                        swddifc   ! Clear-sky SW broadband surface diffuse irradiance:  J. Kenyon, 30 Sep 2016
    REAL, DIMENSION( ims:ime, jms:jme ),  INTENT(INOUT) :: Gx,Bx,gg,bb, & ! For SW sza-interpolation
                                                           swdown_ref,  &
                                                           swddir_ref,  &
@@ -1996,6 +1999,7 @@ CONTAINS
                      ssaaer3d_sw=ssaaer_sw,                             & ! jararias 2013/11
                      asyaer3d_sw=asyaer_sw,                             & ! jararias 2013/11
                      swddir=swddir,swddni=swddni,swddif=swddif,         & ! jararias 2013/08/10
+                     swddnic=swddnic,swddifc=swddifc,                   & ! J. Kenyon, 30 Sep 2016
                      xcoszen=coszen,julian=julian,mp_physics=mp_physics ) ! jararias 2013/08/14
 
              DO j=jts,jte

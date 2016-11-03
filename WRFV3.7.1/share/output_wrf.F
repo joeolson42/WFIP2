@@ -984,9 +984,15 @@ endif
                 !  the time coordinate in netcdf.
 
                 IF (TRIM(p%DataName).EQ."XTIME") THEN
-                  WRITE ( simulation_start_date , FMT = '(I4.4,"-",I2.2,"-",I2.2," ",I2.2,":",I2.2,":",I2.2)' ) &
-                  simulation_start_year,simulation_start_month,simulation_start_day,&
-                  simulation_start_hour,simulation_start_minute,simulation_start_second
+                 if(( switch .EQ. restart_only ) .OR. ( switch .EQ. history_only)) then
+                   WRITE ( simulation_start_date , FMT = '(I4.4,"-",I2.2,"-",I2.2," ",I2.2,":",I2.2,":",I2.2)' ) &
+                   simulation_start_year,simulation_start_month,simulation_start_day,&
+                   simulation_start_hour,simulation_start_minute,simulation_start_second
+                 else
+                   WRITE ( simulation_start_date , FMT = '(I4.4,"-",I2.2,"-",I2.2," ",I2.2,":",I2.2,":",I2.2)' ) &
+                   start_year,start_month,start_day,&
+                   start_hour,start_minute,start_second
+                endif
                   IF ( TRIM(p%Description(1:14)) .EQ. 'minutes since ' ) THEN
                     p%Description(15:33) = TRIM(simulation_start_date)
                     p%Units      (15:33) = TRIM(simulation_start_date)

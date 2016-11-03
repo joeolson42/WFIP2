@@ -366,7 +366,7 @@ CONTAINS
                   dummy11(k)=0.0
                   dummy12(k)=0.0
                 endif
-                dummy13(k)=0.0
+                dummy13(k)=0.0     !sgm
               ENDDO
 
               ! NOTE: The last grid number is kts+1 instead of kte.
@@ -377,9 +377,8 @@ CONTAINS
                    &            dummy10,bl_mynn_cloudpdf,&
                    &            dummy11,dummy12,        &
                    &            PBLH(i,j),HFX(i,j),     &
-                   &            dummy13,                &
                    &            vt(kts:kts+1), vq(kts:kts+1), &
-                   &            dummy14)
+                   &            dummy14,dummy13)
 
 !              ! NOTE: The last grid number is kts+1 instead of kte.
 !              CALL mym_condensation (kts,kts+1, dx,     &
@@ -397,7 +396,8 @@ CONTAINS
 !                   &            qc_bl2D(i,kts:kts+1),   & !JOE-subgrid BL clouds
 !                   &           cldfra_bl2D(i,kts:kts+1),& !JOE-subgrid BL clouds
 !                   &            PBLH(i,j),HFX(i,j),     & !JOE-subgrid BL clouds
-!                   &            vt(kts:kts+1), vq(kts:kts+1))
+!                   &            vt(kts:kts+1), vq(kts:kts+1), &
+ !                  &            th,sgm)
               vt1(i) = vt(kts)
               vq1(i) = vq(kts)
            ENDDO

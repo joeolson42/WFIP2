@@ -1229,7 +1229,7 @@ integer::oops1,oops2
          IF (config_flags%mp_physics.eq.THOMPSONAERO .and. P_QNWFA.gt.1 .and. config_flags%use_aero_icbc) then
          CALL wrf_debug ( 0 , 'Using Thompson_aerosol_aware so using QNWFA monthly climo arrays to create QNWFA_now')
          DO k = 1, num_metgrid_levels
-         WRITE(a_message,*) '  transferring each K-level ', k, ' to qntemp, sample Jan data, ', grid%QNWFA_jan(10,k,10)
+         WRITE(a_message,*) '  transferring each K-level ', k, ' to qntemp, sample Jan data, ', grid%QNWFA_jan(its,k,jts)
          CALL wrf_debug ( 0 , a_message)
             DO j = jts, MIN(jte,jde-1)
                DO i = its, MIN(ite,ide-1)
@@ -1248,7 +1248,7 @@ integer::oops1,oops2
                ENDDO
             ENDDO
          if (k.eq.1) then
-         write(a_message,*) ' DEBUG-GT qntemp(10,jan-feb,10) ', grid%qntemp(10, 1, 10),grid%qntemp(10, 2, 10)
+         write(a_message,*) ' DEBUG-GT qntemp(its,jan-feb,jts) ', grid%qntemp(its, 1, jts),grid%qntemp(its, 2, jts)
          CALL wrf_debug ( 0 , a_message)
          endif
             CALL monthly_interp_to_date ( grid%qntemp , current_date , grid%qntemp2 , &
@@ -1256,7 +1256,7 @@ integer::oops1,oops2
                                           ims , ime , jms , jme , kms , kme , &
                                           its , ite , jts , jte , kts , kte )
          if (k.eq.1) then
-         write(a_message,*) ' DEBUG-GT qntemp2(10,10) ', grid%qntemp2(10,10)
+         write(a_message,*) ' DEBUG-GT qntemp2(its,jts) ', grid%qntemp2(its,jts)
          CALL wrf_debug ( 0 , a_message)
          endif
             DO j = jts, MIN(jte,jde-1)
@@ -2210,8 +2210,8 @@ integer::oops1,oops2
       CALL nl_get_mminlu ( grid%id , mminlu )
       write(a_message,*) 'MMINLU = ',trim(mminlu)
       CALL wrf_debug ( 1 , a_message )
-      write(a_message,*) 'sf_surface_physics = ',model_config_rec%sf_surface_physics(grid%id)
-      CALL wrf_debug ( 1, a_message )
+!      write(a_message,*) 'sf_surface_physics = ',model_config_rec%sf_surface_physics(grid%id)
+!      CALL wrf_debug ( 1, a_message )
 
       probs_with_nlcd : SELECT CASE ( model_config_rec%sf_surface_physics(grid%id) )
 

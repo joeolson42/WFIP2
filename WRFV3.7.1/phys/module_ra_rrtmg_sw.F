@@ -8741,7 +8741,8 @@
 ! -------------------      by Zhenxin 2011-06-20      --------------------------------!
              sibvisdir, sibvisdif, sibnirdir, sibnirdif,         &
 ! ----------------------  End,  Zhenxin 2011-06-20    --------------------------------!
-             swdkdir,swdkdif                                & ! jararias, 2013/08/10
+             swdkdir,swdkdif,                               & ! jararias, 2013/08/10
+             swdkcdir,swdkcdif                              & ! J. Kenyon, 30 Sep 2016
                                                                 )
 
 
@@ -8966,7 +8967,9 @@
       integer, intent(in)        :: aer_opt
       real(kind=rb), intent(out) :: &
         swdkdir(:,:), & ! Total shortwave downward direct flux (W/m2),  Dimensions: (ncol,nlay) jararias, 2013/08/10
-        swdkdif(:,:)    ! Total shortwave downward diffuse flux (W/m2), Dimensions: (ncol,nlay) jararias, 2013/08/10
+        swdkdif(:,:), & ! Total shortwave downward diffuse flux (W/m2), Dimensions: (ncol,nlay) jararias, 2013/08/10
+        swdkcdir(:,:), & ! Clear-sky shortwave downward direct flux (W/m2),  Dimensions: (ncol,nlay)  J. Kenyon, 30 Sep 2016
+        swdkcdif(:,:)    ! Clear-sky shortwave downward diffuse flux (W/m2), Dimensions: (ncol,nlay)  J. Kenyon, 30 Sep 2016
 
 
 
@@ -9114,7 +9117,9 @@
       real(kind=rb) :: swnflx(nlay+2)         ! Total sky shortwave net flux (W/m2)
       real(kind=rb) :: swnflxc(nlay+2)        ! Clear sky shortwave net flux (W/m2)
       real(kind=rb) :: dirdflux(nlay+2)       ! Direct downward shortwave surface flux
-      real(kind=rb) :: difdflux(nlay+2)       ! Diffuse downward shortwave surface flux
+      real(kind=rb) :: difdflux(nlay+2)       ! Diffuse downward shortwave surface flux  
+      real(kind=rb) :: dirdcflux(nlay+2)      ! Clear sky direct downward shortwave flux  !  J. Kenyon, 30 Sep 2016
+      real(kind=rb) :: difdcflux(nlay+2)      ! Clear sky diffuse downward shortwave flux !  J. Kenyon, 30 Sep 2016
       real(kind=rb) :: uvdflx(nlay+2)         ! Total sky downward shortwave flux, UV/vis  
       real(kind=rb) :: nidflx(nlay+2)         ! Total sky downward shortwave flux, near-IR 
       real(kind=rb) :: dirdnuv(nlay+2)        ! Direct downward shortwave flux, UV/vis
@@ -9375,6 +9380,12 @@
             difdflux(i) = swdflx(iplon,i) - dirdflux(i)
             swdkdir(iplon,i) = dirdflux(i) ! all-sky direct flux   jararias, 2013/08/10
             swdkdif(iplon,i) = difdflux(i) ! all-sky diffuse flux  jararias, 2013/08/10
+
+!  Clear-sky direct/diffuse fluxes:  J. Kenyon, 30 Sep 2016
+            dirdcflux(i) = zbbcddir(i)
+            difdcflux(i) = swdflxc(iplon,i) - dirdcflux(i)
+            swdkcdir(iplon,i) = dirdcflux(i) ! clear-sky direct flux   
+            swdkcdif(iplon,i) = difdcflux(i) ! clear-sky diffuse flux
 
 !  UV/visible direct/diffuse fluxes
             dirdnuv(i) = zuvfddir(i)
@@ -9863,6 +9874,7 @@ CONTAINS
                        swupflx, swupflxc, swdnflx, swdnflxc,      &
                        tauaer3d_sw,ssaaer3d_sw,asyaer3d_sw,       & ! jararias 2013/11
                        swddir, swddni, swddif,                    & ! jararias 2013/08
+                       swddnic,swddifc,                           & ! J. Kenyon, 30 Sep 2016
                        xcoszen,julian                             & ! jararias 2013/08
                                                                   )
 !------------------------------------------------------------------
@@ -9931,7 +9943,10 @@ CONTAINS
    real, dimension(ims:ime,jms:jme), intent(out) :: &
             swddir,  &  ! All-sky broadband surface direct horiz irradiance
             swddni,  &  ! All-sky broadband surface direct normal irradiance
-            swddif      ! All-sky broadband surface diffuse irradiance
+            swddif,  &  ! All-sky broadband surface diffuse irradiance
+            swddnic, &  ! Clear-sky broadband surface direct normal irradiance
+            swddifc     ! Clear-sky broadband surface diffuse irradiance
+   real, dimension(ims:ime,jms:jme) :: swddirc
    real, optional, intent(in) :: &
             julian      ! julian day (1-366)
    real, dimension(ims:ime,jms:jme), intent(in) :: &
@@ -10109,7 +10124,9 @@ CONTAINS
                                                        sibnirdif     ! Zhenxin 2011-06-20
 
     real, dimension( 1, kts:kte+2 ) ::                   swdkdir, &  ! jararias, 2013/08/10
-                                                         swdkdif     ! jararias, 2013/08/10
+                                                         swdkdif, &  ! jararias, 2013/08/10
+                                                         swdkcdir,&  ! J. Kenyon, 30 Sep 2016
+                                                         swdkcdif    ! J. Kenyon, 30 Sep 2016
 
     real, dimension( 1, kts:kte+1 )  ::                     swhr, &
                                                            swhrc
@@ -11011,7 +11028,8 @@ CONTAINS
 ! -----      Zhenxin added for ssib coupiling 2011-06-20 --------!
              sibvisdir, sibvisdif, sibnirdir, sibnirdif,         &
 ! --------------------   End of addiation by Zhenxin 2011-06-20 ------!
-             swdkdir, swdkdif                      &  ! jararias, 2012/08/10
+             swdkdir, swdkdif,                     &  ! jararias, 2012/08/10
+             swdkcdir, swdkcdif                    &  ! J. Kenyon, 30 Sep 2016
                                                    )
 
 
@@ -11041,6 +11059,11 @@ CONTAINS
             swddir(i,j)    = swdkdir(1,1)          ! jararias 2013/08/10
             swddni(i,j)    = swddir(i,j) / coszrs  ! jararias 2013/08/10
             swddif(i,j)    = swdkdif(1,1)          ! jararias 2013/08/10
+
+                                                   ! Clear-sky components:
+            swddirc(i,j)   = swdkcdir(1,1)         !  J. Kenyon, 30 Sep 2016
+            swddnic(i,j)   = swddirc(i,j) / coszrs !  J. Kenyon, 30 Sep 2016
+            swddifc(i,j)   = swdkcdif(1,1)         !  J. Kenyon, 30 Sep 2016
 
 ! Output up and down layer fluxes for total and clear sky.
 ! Vertical ordering is from bottom to top in units of W m-2. 

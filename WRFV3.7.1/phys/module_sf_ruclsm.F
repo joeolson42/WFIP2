@@ -1579,6 +1579,15 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
        IF(NEWSN.GT.0.) THEN
 !Update snow on the ground
          snwe=snwe+newsn-intersn
+      if(drip > 0.) then
+       if (snow_mosaic==1.) then
+         dripsn = drip*snowfrac
+         dripnosn=drip*(1.-snowfrac)
+         snwe=snwe+dripsn
+       else
+         snwe=snwe+drip
+       endif
+      endif
          newsnowratio = min(1.,newsn/snwe)
          snhei=snwe*rhowater/rhosn
          NEWSN=NEWSN*rhowater/rhonewsn
@@ -1764,7 +1773,6 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
           runoff1s=0.
           runoff2s=0.
 
-           dripnosn=drip*(1.-snowfrac)
          CALL SOIL(spp_lsm,rstochcol,fieldcol_sf,               &
 !--- input variables
             i,j,iland,isoil,delt,ktau,conflx,nzs,nddzs,nroot,   &
@@ -1875,10 +1883,8 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
       if (SEAICE .LT. 0.5) then
 ! LAND
            if(snow_mosaic==1.)then
-              dripsn = drip*snowfrac
               snfr=1.
            else
-              dripsn = drip
               snfr=snowfrac
            endif
          CALL SNOWSOIL (spp_lsm,rstochcol,fieldcol_sf,     & !--- input variables
@@ -4808,8 +4814,8 @@ print *, 'D9SN,SOILT,TSOB : ', D9SN,SOILT,TSOB
         TX2=TQ2*(1.-H)
         Q1=TX2+H*QS1
 !        Q1=alfa*QS1
-!    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
-    if (i==421.and.j==280) then
+    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
+!    if (i==421.and.j==280) then
         print *,'VILKA1 - TS1,QS1,TQ2,H,TX2,Q1',TS1,QS1,TQ2,H,TX2,Q1
     ENDIF
 !with alfa        go to 100
@@ -4820,8 +4826,8 @@ print *, 'D9SN,SOILT,TSOB : ', D9SN,SOILT,TSOB
         QSG=QS1
         TSO(1)=TS1
         QCG=max(0.,Q1-QS1)
-!    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
-    if (i==421.and.j==280) then
+    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
+!    if (i==421.and.j==280) then
         print *,'90 QVG,QSG,QCG,TSO(1)',QVG,QSG,QCG,TSO(1)
     ENDIF
         GOTO 200
@@ -4829,9 +4835,9 @@ print *, 'D9SN,SOILT,TSOB : ', D9SN,SOILT,TSOB
         AA=(AA*H+CC)/PP
         CALL VILKA(TN,AA,BB,PP,QS1,TS1,TBQ,KTAU,i,j,iland,isoil)
         Q1=TX2+H*QS1
-!    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
+    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
 !     if(i.eq.279.and.j.eq.263) then
-    if (i==421.and.j==280) then
+!    if (i==421.and.j==280) then
         print *,'VILKA2 - TS1,QS1,TQ2,H,TX2,Q1',TS1,QS1,TQ2,H,TX2,Q1
     ENDIF
         IF(Q1.GE.QS1) GOTO 90
@@ -4845,7 +4851,8 @@ print *, 'D9SN,SOILT,TSOB : ', D9SN,SOILT,TSOB
 !   endif
         TSO(1)=TS1
         QCG=0.
-    if (i==421.and.j==280) then
+    IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
+!    if (i==421.and.j==280) then
        print *,'q1,qsg,qvg,qvatm,alfa,h',q1,qsg,qvg,qvatm,alfa,h
     endif
   200   CONTINUE
@@ -6468,13 +6475,19 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
      print *,'i,j,tabs,ftem',i,j,tabs,ftem
     ENDIF
 !--- incoming solar function
+     cmin = 1./rsmax_data
+     cmax = 1./rstbl(iland)
+    if(lai > 1.) then
+     cmax = lai/rstbl(iland) ! max conductance
+    endif
 ! Noihlan & Planton (1988)
        f1=0.
-!       fsol=rstbl(iland)/rsmax_data
 !    if(lai > 0.01) then
 !       f1 = 1.1/lai*gswin/rgltbl(iland)! f1=0. when GSWin=0.
-!       fsol = (f1+rstbl(iland)/rsmax_data)/(1.+f1)
+!       fsol = (f1+cmin/cmax)/(1.+f1)
 !       fsol=min(1.,fsol)
+!    else
+!       fsol=cmin/cmax
 !    endif
 !     totcnd = max(lai/rstbl(iland), pctot * ftem * f1) 
 ! Mahrer & Avissar (1982), Avissar et al. (1985)
@@ -6485,15 +6498,9 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
      endif
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
 !    if (i==421.and.j==280) then
-     print *,'i,j,GSWin,fsol',i,j,gswin,fsol
+     print *,'i,j,GSWin,lai,f1,fsol',i,j,gswin,lai,f1,fsol
     ENDIF
 !--- total conductance
-     cmin = 1./rsmax_data
-     cmax = 1./rstbl(iland)
-    if(lai > 1.) then
-     cmin = lai/rsmax_data ! min conductance
-     cmax = lai/rstbl(iland) ! max conductance
-    endif
      totcnd =(cmin + (cmax - cmin)*pctot*ftem*fsol)/cmax
 
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
