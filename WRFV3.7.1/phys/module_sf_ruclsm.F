@@ -1579,16 +1579,16 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
        IF(NEWSN.GT.0.) THEN
 !Update snow on the ground
          snwe=snwe+newsn-intersn
-      if(drip > 0.) then
-       if (snow_mosaic==1.) then
-         dripsn = drip*snowfrac
-         dripnosn=drip*(1.-snowfrac)
-         snwe=snwe+dripsn
-       else
-         snwe=snwe+drip
-       endif
-      endif
-         newsnowratio = min(1.,newsn/snwe)
+!      if(drip > 0.) then
+!       if (snow_mosaic==1.) then
+!         dripsn = drip*snowfrac
+!         dripnosn=drip*(1.-snowfrac)
+!         snwe=snwe+dripsn
+!       else
+!         snwe=snwe+drip
+!       endif
+!      endif
+!         newsnowratio = min(1.,newsn/snwe)
          snhei=snwe*rhowater/rhosn
          NEWSN=NEWSN*rhowater/rhonewsn
        ENDIF
@@ -1640,6 +1640,18 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
              KEEP_SNOW_ALBEDO = 1.
              snow_mosaic=0.  ! ???
       ENDIF
+! Add drip to snow on the ground
+      if(drip > 0.) then
+       if (snow_mosaic==1.) then
+         dripsn = drip*snowfrac
+         dripnosn=drip*(1.-snowfrac)
+         snwe=snwe+dripsn
+       else
+         snwe=snwe+drip
+       endif
+      endif
+         newsnowratio = min(1.,newsn/snwe)
+         snhei=snwe*rhowater/rhosn
 
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
       print *,'SNHEI_CRIT,SNOWFRAC,SNHEI_CRIT_newsn,SNOWFRACnewsn', &

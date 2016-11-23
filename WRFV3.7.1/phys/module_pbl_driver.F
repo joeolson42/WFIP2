@@ -28,6 +28,7 @@ CONTAINS
                  ,znu, znw, mut, p_top                             &
 ! paj
                  ,ctopo,ctopo2,windfarm_opt,power                  &
+                 ,windfarm_ws                                      &
                  ,ysu_topdown_pblmix                               &
                  ,shinhong_tke_diag                                &
               ! OPTIONAL for TEMF scheme
@@ -359,7 +360,7 @@ CONTAINS
 
 
    INTEGER,    INTENT(IN   )    ::     bl_pbl_physics, ra_lw_physics,sf_sfclay_physics,sf_urban_physics,windfarm_opt
-   INTEGER,    INTENT(IN   )    ::     ysu_topdown_pblmix
+   INTEGER,    INTENT(IN   )    ::     ysu_topdown_pblmix,windfarm_ws
    INTEGER,    OPTIONAL,  INTENT(IN   )    ::     shinhong_tke_diag
    INTEGER,    OPTIONAL,  INTENT(IN   )    ::     scalar_pblmix, tracer_pblmix
 
@@ -2023,7 +2024,7 @@ CONTAINS
 !
                      CALL wrf_debug(100,'in phys/module_wind_fitch.F')
                      CALL dragforce(                                  &
-                     & ID=id                                             &
+                     & ID=id,WINDFARM_WS=windfarm_ws                     &
                      &,Z_AT_W=z_at_w,u=u_phy,v=v_phy                     &
                      &,DX=dx,DZ=dz8w,DT=dt                               &
                      &,QKE=qke                                           &

@@ -2113,12 +2113,34 @@ CONTAINS
     REAL, DIMENSION(kts:kte), INTENT(IN) :: Sh,el
 
     !JOE: variables for BL clouds
-    REAL::zagl,cld9,damp,edown,RHcrit,RHmean,RHsum,RHnum,Hshcu,PBLH2
+    REAL::zagl,cld9,damp,edown,RHcrit,RHmean,RHsum,RHnum,Hshcu,PBLH2,ql_limit
     REAL, PARAMETER :: Hfac = 3.0     !cloud depth factor for HFX (m^3/W)
     REAL, PARAMETER :: HFXmin = 50.0  !min W/m^2 for BL clouds
     REAL            :: RH_00L, RH_00O, phi_dz, lfac
     REAL, PARAMETER :: cdz = 2.0
     REAL, PARAMETER :: mdz = 1.5
+
+    !JAYMES:  variables for tropopause-height estimation
+    REAL            :: theta1, theta2, ht1, ht2
+    INTEGER         :: k_tropo
+
+! First, obtain an estimate for the tropopause height (k), using the method employed in the
+! Thompson subgrid-cloud scheme.  This height will be a consideration later when determining 
+! the "final" subgrid-cloud properties.
+! JAYMES:  added 3 Nov 2016, adapted from G. Thompson
+
+      DO k = kte-3, kts, -1
+         theta1 = th(k)
+         theta2 = th(k+2)
+         ht1 = 44307.692 * (1.0 - (p(k)/101325.)**0.190)
+         ht2 = 44307.692 * (1.0 - (p(k+2)/101325.)**0.190)
+         if ( (((theta2-theta1)/(ht2-ht1)) .lt. 10./1500. ) .AND.       &
+     &                       (ht1.lt.19000.) .and. (ht1.gt.4000.) ) then 
+            goto 86
+         endif
+      ENDDO
+ 86   continue
+      k_tropo = MAX(kts+2, k+2)
 
 ! WA TEST 8/6/15 save incoming qc and cldfra (from EDMF?)
  !   qc_prev = qc_bl1D
@@ -2342,6 +2364,25 @@ CONTAINS
               ELSE
                 ql (k) = sgm(k)*(EXP(-1.) + 0.66*q1k + 0.086*q1k**2)
               ENDIF
+  
+              !Next, adjust our initial estimates of cldfra and ql based
+              !on tropopause-height and PBLH considerations
+              !JAYMES:  added 4 Nov 2016
+              if ((cld(k) .gt. 0.) .or. (ql(k) .gt. 0.))  then
+                 if (k .le. k_tropo) then
+                   !At and below tropopause: impose an upper limit on ql; assume that
+                   !a maximum of 0.5 percent supersaturation in water vapor can be
+                   !available for cloud production
+                    ql_limit = 0.005 * qsat_blend( th(k)*exner(k), p(k) )
+                    ql(k) = MIN( ql(k), ql_limit )
+                    if (zagl .lt. PBLH2+1000.) cld(k) = MIN( 1., 1.8*cld(k) )
+                    !Increase the cloud fraction estimate below PBLH+1km
+                 else
+                   !Above tropopause:  eliminate subgrid clouds from CB scheme
+                   cld(k) = 0.
+                    ql(k) = 0.
+                 endif 
+              endif
        
               !buoyancy-flux-related calculations follow
               IF (q1k < -2.) THEN
@@ -2374,7 +2415,7 @@ CONTAINS
               ! vt and vq (i.e., beta-theta and beta-q in NN09, Eq. B8).  
               ! The "-1" and "-tv0" terms are included for consistency with 
               ! the legacy vt and vq formulations (above).
-       
+
               !return a cloud condensate and cloud fraction for icloud_bl option:
               cldfra_bl1D(k) = cld(k)
               qc_bl1D(k) = ql(k)
@@ -4517,16 +4558,16 @@ ENDIF
     DO I=1,NUP2
        QCn = 0.
        overshoot = 0
+       l  = dl*I                            ! diameter of plume  
        DO k=KTS+1,KTE
 
-          !JOE - increase background entrainment within clouds
-          !if(QCn > 1.e-8)ENT(k,i) = max(ENT(k,i),0.0004)
-          !JOE - use constant ent in dry plumes in the PBL
-!          IF(QCn < 1.e-8 .AND. ZW(k) < pblh) ENT(k,i) = max(0.0009,0.3/ZW(k))
-          !JOE - add some w-dependency for entrainment
-!          IF(UPW(K-1,I)>0.01) ENT(k,i) = max(ENT(k,i), 0.23/(UPW(K-1,I)*230.))
-          !JOE - increase entrainment for plumes extending too high.
-          IF(ZW(k) >= pblh+2000.) ENT(k,i) =ENT(k,i) + (ZW(k)-(pblh+2000.)) * 2.0E-6
+          !JOE - add some w-dependency for entrainment a la Tian and Kuang (2016)
+          ENT(k,i) = 0.75/(MIN(MAX(UPW(K-1,I),0.5),2.0)*l)
+          !JOE - implement minimum background entrainment 
+          ENT(k,i) = max(ENT(k,i),0.0003)
+          ENT(k,i) = max(ENT(k,i),0.1/ZW(k)) 
+          !JOE - increase entrainment for plumes extending very high.
+          IF(ZW(k) >= pblh+1500.) ENT(k,i) =ENT(k,i) + (ZW(k)-(pblh+1500.)) * 2.0E-6
 
           EntExp=exp(-ENT(K,I)*(ZW(k)-ZW(k-1)))
 
@@ -4565,8 +4606,8 @@ ENDIF
 !             Wn2 = 0.0
 !          ENDIF
 
-          !Limit very tall plumes (no longer necessary)
-          Wn2=Wn2*EXP(-MAX(ZW(k)-(pblh+3000.),0.0)/1000.)
+          !Limit very tall plumes
+          Wn2=Wn2*EXP(-MAX(ZW(k)-(pblh+2000.),0.0)/1000.)
           IF(ZW(k) >= pblh+4000.)Wn2=0.
  
           !JOE- minimize the plume penetratration in stratocu-topped PBL
@@ -4681,14 +4722,15 @@ ENDIF
      s_awqv(k) = s_awqt(k)  - s_awqc(k)
   ENDDO
 
-!JOE: ADD CLDFRA_bl1d, qc_bl1d. Note that they have already been defined above.
-!     Here, a shallow-cu component is added (or max is used).  
+!JOE: ADD CLDFRA_bl1d, qc_bl1d. Note that they have already been defined in
+!     mym_condensation. Here, a shallow-cu component is added.  
    DO K=KTS,KTE
-!     qc_bl1d(k)=0.
-!     cldfra_bl1d(k)=0.
 
       IF (cldfra_opt == 0) THEN
          IF(edmf_qc(k)>0.0)THEN
+            satvp = 3.80*exp(17.27*(th(k)-273.)/ &
+                   (th(k)-36.))/(.01*p(k))
+            rhgrid = max(.01,MIN( 1., qv(k) /satvp))
 
             !COMPUTE CLDFRA & QC_BL FROM MASS-FLUX SCHEME and recompute vt & vq
             fng = 1.05     !-1.5*-0.7
@@ -4715,22 +4757,9 @@ ENDIF
             alpha = 0.61*pt
             t     = thl(k)*exner(k)
             beta  = pt*xl/(t*cp) - 1.61*pt
- 
-            vt(k) = (1.-cldfra_bl1D(k))*qww   + cldfra_bl1D(k)*(qww   - beta*bb*(1.+fng)) - 1.
-            vq(k) = (1.-cldfra_bl1D(k))*alpha + cldfra_bl1D(k)*(alpha + beta*a* (1.+fng)) - tv0
-            ! These equations were derived by Jaymes, using BCMT95, Eq. B5,
-            ! in order to recast the BC02/BCMT95 buoyancy flux in terms of
-            ! vt and vq (i.e., beta-theta and beta-q in NN09, Eq. B8).
-            ! The "-1" and "-tv0" terms are included for consistency with
-            ! the legacy vt and vq formulations (above).
+            !Buoyancy flux terms have been moved to the end of this section...
 
-            !Compute convective sgq from Chaboureau and Bechtold (2005, JGR)
-            !diffqt=edmf_qt(k)-qt(k)
-            !if(ABS(diffqt) < 1.0E-6)diffqt = 1.0E-6
-            !!sigq = MAX(edmf_a(k)*(1.-edmf_a(k))*diffqt**2 , 1.0e-8)
-            !sigq = MAX(5.*edmf_a(k)*diffqt**2 , 1.0e-8)
-            !sigq = sqrt(sigq)
-            !move new form below:
+            !Now calculate convective component of the cloud fraction:
             if (a > 0.0) then
                f = MIN(1.0/a, 4.0)              ! f is vertical profile scaling function (CB2005)
             else
@@ -4749,13 +4778,32 @@ ENDIF
             !   print*,"  CB: sigq=",sigq," qmq=",qmq," tlk=",tlk
             !   print*,"  CB: mf_cf=",mf_cf," cldfra_bl=",cldfra_bl1d(k)," edmf_a=",edmf_a(k)
             !ENDIF
-            IF (mf_cf > edmf_a(k)) THEN
-               cldfra_bl1d(k) = mf_cf
-               qc_bl1d(k) = edmf_qc(k)*edmf_a(k)/mf_cf
+            IF (rhgrid >= .93) THEN
+               !IN high RH, defer to stratus component if > convective component
+               cldfra_bl1d(k) = MAX(mf_cf, cldfra_bl1d(k))
+               IF (cldfra_bl1d(k) > edmf_a(k)) THEN
+                  qc_bl1d(k) = edmf_qc(k)*edmf_a(k)/mf_cf
+               ELSE
+                 cldfra_bl1d(k)=edmf_a(k)
+                 qc_bl1d(k) = edmf_qc(k)
+               ENDIF
             ELSE
-               cldfra_bl1d(k)=edmf_a(k) !MAX(mf_cf,edmf_a(k))
-               qc_bl1d(k) = edmf_qc(k)  !MAX(qc_bl1d(k), edmf_qc(k))
+               IF (mf_cf > edmf_a(k)) THEN
+                  cldfra_bl1d(k) = mf_cf
+                  qc_bl1d(k) = edmf_qc(k)*edmf_a(k)/mf_cf
+               ELSE
+                  cldfra_bl1d(k)=edmf_a(k)
+                  qc_bl1d(k) = edmf_qc(k)
+               ENDIF
             ENDIF
+            !Now recalculate the terms for the buoyancy flux for mass-flux clouds:
+            ! These equations were derived by Jaymes, using BCMT95, Eq. B5,
+            ! in order to recast the BC02/BCMT95 buoyancy flux in terms of
+            ! vt and vq (i.e., beta-theta and beta-q in NN09, Eq. B8).
+            ! The "-1" and "-tv0" terms are included for consistency with
+            ! the legacy vt and vq formulations (above).
+            vt(k) = (1.-cldfra_bl1D(k))*qww   + cldfra_bl1D(k)*(qww   - beta*bb*(1.+fng)) - 1.
+            vq(k) = (1.-cldfra_bl1D(k))*alpha + cldfra_bl1D(k)*(alpha + beta*a* (1.+fng)) - tv0
          ENDIF
       ELSEIF(cldfra_opt == 1) THEN
          !Randall and Xu

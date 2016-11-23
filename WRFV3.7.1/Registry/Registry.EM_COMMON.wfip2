@@ -1392,11 +1392,11 @@ state   real    swddir_ref   ij     misc         1         -     rd     "swddir_
 # jararias 2013/11
 state   real    aod5502d     ij     misc         1         -     {15}r "AOD5502D"   "Total aerosol optical depth at 550 nm" ""
 state   real    angexp2d     ij     misc         1         -     {15}r "ANGEXP2D"   "Aerosol Angstrom exponent" ""
-state   real    aerssa2d     ij     misc         1         -     {15}r "AERSSA2D"   "Aerosol single-scattering albedo" ""
-state   real    aerasy2d     ij     misc         1         -     {15}r "AERASY2D"   "Aerosol asymmetry factor" ""
-state   real    aod5503d     ikj    misc         1         -     r      "AOD5503D"   "3D aerosol optical depth at 550 nm" ""
-state   real    taod5503d    ikj    misc         1         -     r      "TAOD5503D"  "3D aerosol optical depth at 550 nm (MP=28)" ""
-state   real    taod5502d    ij     misc         1         -     irh      "TAOD5502D"  "2D aerosol optical depth at 550 nm (MP=28)" ""
+state   real    aerssa2d     ij     misc         1         -     {15}rh "AERSSA2D"   "Aerosol single-scattering albedo" ""
+state   real    aerasy2d     ij     misc         1         -     {15}rh "AERASY2D"   "Aerosol asymmetry factor" ""
+state   real    aod5503d     ikj    misc         1         -     r     "AOD5503D"   "3D aerosol optical depth at 550 nm" ""
+state   real    taod5503d    ikj    misc         1         -     r     "TAOD5503D"  "3D aerosol optical depth at 550 nm (MP=28)" ""
+state   real    taod5502d    ij     misc         1         -     irh   "TAOD5502D"  "2D aerosol optical depth at 550 nm (MP=28)" ""
 
 # CLWRF-WRF4G
 state    real  T2MIN            ij      misc        1         -      -        "T2MIN"                 "MINIMUM TEMPERATURE AT 2M HEIGHT IN DIAGNOSTIC OUTPUT INTERVAL"                      "K"
@@ -1483,7 +1483,7 @@ state integer  I_ACLWUPB        ij      misc        1         -      rd=(interp_
 state integer  I_ACLWUPBC       ij      misc        1         -      rd=(interp_fcni)u=(copy_fcni)     "I_ACLWUPBC"    "BUCKET FOR UPWELLING CLEAR SKY LONGWAVE FLUX AT BOTTOM" "J m-2"
 state integer  I_ACLWDNB        ij      misc        1         -      rd=(interp_fcni)u=(copy_fcni)     "I_ACLWDNB"     "BUCKET FOR DOWNWELLING LONGWAVE FLUX AT BOTTOM"          "J m-2"
 state integer  I_ACLWDNBC       ij      misc        1         -      rd=(interp_fcni)u=(copy_fcni)     "I_ACLWDNBC"    "BUCKET FOR DOWNWELLING CLEAR SKY LONGWAVE FLUX AT BOTTOM" "J m-2"
-state    real  SWUPT            ij      misc        1         -      rdu     "SWUPT"                 "INSTANTANEOUS UPWELLING SHORTWAVE FLUX AT TOP"          "W m-2"
+state    real  SWUPT            ij      misc        1         -      rhdu    "SWUPT"                 "INSTANTANEOUS UPWELLING SHORTWAVE FLUX AT TOP"          "W m-2"
 state    real  SWUPTC           ij      misc        1         -      rdu     "SWUPTC"                "INSTANTANEOUS UPWELLING CLEAR SKY SHORTWAVE FLUX AT TOP" "W m-2"
 state    real  SWDNT            ij      misc        1         -      rdu     "SWDNT"                 "INSTANTANEOUS DOWNWELLING SHORTWAVE FLUX AT TOP"          "W m-2"
 state    real  SWDNTC           ij      misc        1         -      rdu     "SWDNTC"                "INSTANTANEOUS DOWNWELLING CLEAR SKY SHORTWAVE FLUX AT TOP" "W m-2"
@@ -2605,6 +2605,7 @@ state integer nodyn_dummy - dyn_nodyn -  -  -  "" "" ""
 # Turbine drag physics.
 rconfig   integer     windfarm_opt        namelist,physics      max_domains    0       irh       "windfarm_opt"                ""      ""
 rconfig   integer     windfarm_ij         namelist,physics      1              0       irh       "windfarm_ij"                ""      ""
+rconfig   integer     windfarm_ws         namelist,physics      1              0       irh       "windfarm_ws"                ""      ""
 #
 #---------------------------------------------------------------------------------------------------------------------------------------
 # Package Declarations

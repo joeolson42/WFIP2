@@ -2605,6 +2605,7 @@ state integer nodyn_dummy - dyn_nodyn -  -  -  "" "" ""
 # Turbine drag physics.
 rconfig   integer     windfarm_opt        namelist,physics      max_domains    0       irh       "windfarm_opt"                ""      ""
 rconfig   integer     windfarm_ij         namelist,physics      1              0       irh       "windfarm_ij"                ""      ""
+rconfig   integer     windfarm_ws         namelist,physics      1              0       irh       "windfarm_ws"                ""      ""
 #
 #---------------------------------------------------------------------------------------------------------------------------------------
 # Package Declarations
