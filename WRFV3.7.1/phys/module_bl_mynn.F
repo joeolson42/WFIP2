@@ -4782,7 +4782,7 @@ ENDIF
                !IN high RH, defer to stratus component if > convective component
                cldfra_bl1d(k) = MAX(mf_cf, cldfra_bl1d(k))
                IF (cldfra_bl1d(k) > edmf_a(k)) THEN
-                  qc_bl1d(k) = edmf_qc(k)*edmf_a(k)/mf_cf
+                  qc_bl1d(k) = edmf_qc(k)*edmf_a(k)/cldfra_bl1d(k)
                ELSE
                  cldfra_bl1d(k)=edmf_a(k)
                  qc_bl1d(k) = edmf_qc(k)
