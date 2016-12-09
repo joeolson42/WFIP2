@@ -51,8 +51,8 @@ MODULE module_wind_fitch
 
   IMPLICIT NONE
 
-  INTEGER, PARAMETER :: MAXVALS  = 100   
-  INTEGER, PARAMETER :: MAXVALS2 = 100     
+  INTEGER, PARAMETER :: MAXVALS  = 300   
+  INTEGER, PARAMETER :: MAXVALS2 = 300     
 !
   INTEGER           :: nt
   INTEGER, DIMENSION(:), ALLOCATABLE :: NKIND
@@ -62,9 +62,9 @@ MODULE module_wind_fitch
   REAL :: turbws(maxvals,maxvals2),turbtc(maxvals,maxvals2),turbpw(maxvals,maxvals2)
 !
 CONTAINS
-
+!
   SUBROUTINE  dragforce(                      &
-       & id                                      &
+       & id,windfarm_ws                      &
        &,z_at_w,u,v                 &
        &,dx,dz,dt,qke                            &
        &,du,dv                                   &
@@ -76,7 +76,7 @@ CONTAINS
 !
 !
 !
-  INTEGER, INTENT(IN) :: id,windfarm_opt 
+  INTEGER, INTENT(IN) :: id,windfarm_opt,windfarm_ws
   INTEGER, INTENT(IN) :: its,ite,jts,jte,kts,kte
   INTEGER, INTENT(IN) :: ims,ime,jms,jme,kms,kme
   INTEGER, INTENT(IN) :: ids,ide,jds,jde,kds,kde
@@ -97,10 +97,10 @@ CONTAINS
 !
 ! ... PAJ: more variables ...
 !
-  REAL :: speedhub,speed1,speed2
+  REAL :: speedhub,speed1,speed2,rews,speedlayer
   real :: power1,power2,area,ec
   INTEGER :: kbot,ktop,kt
-
+!
   itf=MIN0(ite,ide-1)
   jtf=MIN0(jte,jde-1)
   ktf=MIN0(kte,kde-1)
@@ -144,52 +144,87 @@ CONTAINS
               zheightl = zheightu
             ENDIF
           ENDDO
+!          
           IF ( kfound ) THEN
 !
 ! ... PAJ: Changes introduced to compute only one set of turbine coefficients ...
 !          First computes the wind speed at the hub height.
 !
-          kfound = .false.
-          zheightl=0.
-          ! find vertical levels (half levels) within the hub height
-          DO k=kts,ktf
-            IF(.NOT. kfound) THEN
-              z2 = zheightl + 0.5*dz(i,k,j) 
+! HERE, Using Hub Height Wind Speeds.
+            IF (windfarm_ws .EQ. 1) THEN
 !
-              IF(hubheight(kt) .GE. z2 ) THEN
-                kbot=k 
-              ELSE
-                ktop=k
-                kfound = .TRUE.
-              ENDIF
+              kfound = .false.
+              zheightl=0.
+              ! find vertical levels (half levels) within the hub height
+              DO k=kts,ktf
+                IF(.NOT. kfound) THEN
+                  z2 = zheightl + 0.5*dz(i,k,j) 
 !
-              if (.NOT. kfound) z1=z2
-              zheightl = z2 + 0.5*dz(i,k,j)
-            ENDIF
-          ENDDO
+                  IF(hubheight(kt) .GE. z2 ) THEN
+                    kbot=k 
+                  ELSE
+                    ktop=k
+                    kfound = .TRUE.
+                  ENDIF
 !
-          speed1=0.
-          speed2=0.
-          if (ktop.eq.1) then
-           speedhub=sqrt(u(i,1,j)**2.+v(i,1,j)**2.)*hubheight(kt)/z1
-          else
-           speed1=sqrt(u(i,kbot,j)**2.+v(i,kbot,j)**2.)
-           speed2=sqrt(u(i,ktop,j)**2.+v(i,ktop,j)**2.)
-           speedhub=speed1+((speed2-speed1)/(z2-z1))*(hubheight(kt)-z1)
-          endif
+                  if (.NOT. kfound) z1=z2
+                  zheightl = z2 + 0.5*dz(i,k,j)
+                ENDIF
+              ENDDO
 !
+              speed1=0.
+              speed2=0.
+              if (ktop.eq.1) then
+                speedhub=sqrt(u(i,1,j)**2.+v(i,1,j)**2.)*hubheight(kt)/z1
+              else
+                speed1=sqrt(u(i,kbot,j)**2.+v(i,kbot,j)**2.)
+                speed2=sqrt(u(i,ktop,j)**2.+v(i,ktop,j)**2.)
+                speedhub=speed1+((speed2-speed1)/(z2-z1))*(hubheight(kt)-z1)
+              endif
+!			  
 ! ... calculate TKE, power and thrust coeffs
 !
               CALL dragcof(tkecof,powcof,thrcof,               &
                            speedhub,cutin(kt),cutout(kt),   &
                            npower(kt),diameter(kt),stc(kt),stc2(kt),nkind(kt))
+!             
+              power1=0.5*1.23*speedhub**3.*area*powcof
+              power(i,j)=power1+power(i,j)
+!
+! OTHERWISE, use the REWS.
+!
+            ELSE
+!		
+              area=piconst/4.*diameter(kt)**2.
+              rews = 0.
+!
+              DO k=k_turbine_bot,k_turbine_top ! loop over turbine blade levels
+                z1=z_at_w(i,k,j)-blade_l_point-z_at_w(i,1,j)  ! distance between k level and lower blade tip
+                z2=z_at_w(i,k+1,j)-blade_l_point-z_at_w(i,1,j) ! distance between k+1 level and lower blade tip
+                IF(z1 .LT. 0.) z1=0.0 ! k level lower than lower blade tip
+                IF(z2 .GT. diameter(kt)) z2=diameter(kt) ! k+1 level higher than turbine upper blade tip
+                CALL turbine_area(z1,z2,diameter(kt),wfdensity,tarea)
+!
+                speedlayer=sqrt(u(i,k,j)**2.+v(i,k,j)**2.)
+                rews = rews + (tarea/area)*(1/wfdensity)*speedlayer
+              ENDDO
+!
+! ... calculate TKE, power and thrust coeffs
+!
+              CALL dragcof(tkecof,powcof,thrcof,               &
+                           rews,cutin(kt),cutout(kt),   &
+                           npower(kt),diameter(kt),stc(kt),stc2(kt),nkind(kt))          
+!                           
+              power1=0.5*1.23*rews**3.*area*powcof    
+              power(i,j)=power1+power(i,j)
+!
+            ENDIF
+!
 !
 ! ... PAJ: Computation of power generated by the wind turbine ...
 !
-          area=piconst/4.*diameter(kt)**2.          ! area swept by turbine blades
-          power1=0.5*1.23*speedhub**3.*area*powcof
-          power(i,j)=power1+power(i,j)
-          power2=0.
+            area=piconst/4.*diameter(kt)**2.          ! area swept by turbine blades
+            power2=0.
 !
             DO k=k_turbine_bot,k_turbine_top ! loop over turbine blade levels
               z1=z_at_w(i,k,j)-blade_l_point-z_at_w(i,1,j)  ! distance between k level and lower blade tip
@@ -200,7 +235,16 @@ CONTAINS
 !
               speed=sqrt(u(i,k,j)**2.+v(i,k,j)**2.)
               power2=power2+0.5*powcof*1.23*(speed**3.)*tarea/wfdensity
+!
             ENDDO
+!
+! ... PAJ: normalization introduced to conserve energy ...
+!
+            if (power1.eq.0.or.power2.eq.0) then
+              ec=1.
+            else
+              ec=power1/power2
+            endif
 !
 ! ... PAJ: Computes the tendencies of TKE and momentum ...
 !
@@ -213,14 +257,6 @@ CONTAINS
               CALL turbine_area(z1,z2,diameter(kt),wfdensity,tarea)
 !
               speed=sqrt(u(i,k,j)**2.+v(i,k,j)**2.)
-!`
-! ... PAJ: normalization introduced to conserve energy ...
-!
-              if (power1.eq.0.or.power2.eq.0) then
-              ec=1.
-              else
-              ec=power1/power2
-              endif
 !
               ! output TKE
               qke(i,k,j) = qke(i,k,j)+speed**3.*tarea*tkecof*dt/dz(i,k,j)*ec
@@ -229,11 +265,13 @@ CONTAINS
               ! output v tendency
               dv(i,k,j) = dv(i,k,j)-.5*v(i,k,j)*thrcof*speed*tarea/dz(i,k,j)*ec
             ENDDO
-          ENDIF
-        ENDIF
-        endif
-      ENDIF
-    ENDDO
+!
+!
+          ENDIF ! kfound
+        ENDIF ! config flags for ij
+      ENDIF   ! I/J loop
+      endif   ! Error Checking
+    ENDDO       ! Loop through K levels
 
   END SUBROUTINE dragforce
 
