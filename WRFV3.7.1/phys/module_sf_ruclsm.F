@@ -472,7 +472,7 @@ CONTAINS
            qsfc(i,j) = qvg(i,j)/(1.+qvg(i,j))
            SMELT(i,j) = 0.
            SNOM (i,j) = 0.
-           ACSNOW(i,j) = 0.
+!           ACSNOW(i,j) = 0.
            SNOWFALLAC(i,j) = 0.
            PRECIPFR(i,j) = 0.
            RHOSNF(i,j) = -1.e3 ! non-zero flag
@@ -797,7 +797,7 @@ CONTAINS
              SNOWC(I,J)=0.0
            LMAVAIL(I,J)=1.0
 ! accumulated water equivalent of frozen precipitation over water [mm]
-           acsnow(i,j)=acsnow(i,j)+precipfr(i,j)
+!           acsnow(i,j)=acsnow(i,j)+precipfr(i,j)
 
            ILAND=iswater
 !           ILAND=16
@@ -1291,6 +1291,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
           
 
    INTEGER, INTENT(INOUT)    ::                     ILAND,ISOIL
+   INTEGER                   ::                     ILANDs
 
 !-------- 2-d variables
    REAL                                                        , &
@@ -1388,8 +1389,8 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
    REAL    ::  RNET,GSWNEW,GSWIN,EMISSN,ZNTSN,EMISS_snowfree
    REAL    ::  VEGFRAC, snow_mosaic, snfr, vgfr
-   real    ::  cice, albice, albsn, drip, dripsn, dripnosn
-   real    ::  interw, intersn, infwater
+   real    ::  cice, albice, albsn, drip, dripsn, dripliq
+   real    ::  interw, intersn, infwater, intwratio
 
 !-----------------------------------------------------------------
         integer,   parameter      ::      ilsnow=99 
@@ -1420,7 +1421,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
         VEGFRAC=0.01*VEGFRA
         drip = 0.
         dripsn = 0.
-        dripnosn = 0.
+        dripliq = 0.
         smf = 0.
         interw=0.
         intersn=0.
@@ -1441,6 +1442,14 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
         ALBsn=alb_snow
         EMISSN = 0.98
         EMISS_snowfree = LEMITBL(IVGTYP)
+
+!beka stochastic pert of soil mositure
+!      if(spp_lsm == 1) then
+!! stochastic perturbations for soil moisture
+!         do k=1,nzs
+!            soilm1d(k)=max(0.,min(soilm1d(k)*(1+rstochcol(k)),dqm))
+!         enddo
+!      endif
 
 !--- sea ice properties
 !--- N.N Zubov "Arctic Ice"
@@ -1487,7 +1496,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
            newsn=newsnms*delt
 !---- ACSNOW - run-total snowfall water [mm]
-           acsnow=acsnow+newsn*1.e3
+!           acsnow=acsnow+newsn*1.e3
 
        IF(NEWSN.GT.0.) THEN
 !       IF(NEWSN.GE.1.E-8) THEN
@@ -1551,6 +1560,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
        ENDIF
 
         drip = 0.
+        intwratio=0.
      if(vegfrac > 0.01) then
 ! compute intercepted precipitation - Eq. 1 Lawrence et al.,
 ! J. of Hydrometeorology, 2006, CLM.
@@ -1560,6 +1570,10 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !         interw=DELT*PRCPMS*vegfrac
 !         intersn=NEWSN*vegfrac
          infwater=PRCPMS - interw/delt
+    if((interw+intersn) > 0.) then
+       intwratio=interw/(interw+intersn)
+    endif
+
 ! Update water/snow intercepted by the canopy
          dd1=CST + interw + intersn
          CST=DD1
@@ -1627,10 +1641,9 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !      endif
 
 !         SNOWFRAC=MIN(1.,SNHEI/(2.*SNHEI_CRIT))
-       if(snowfrac < 0.3 .and. tabs > 275.) then
-! turn on snow "mosaic" when snowfrac < 0.3
-         snow_mosaic = 1. 
-       endif
+!       elseif(snowfrac < 0.3 .and. tabs > 275.) then
+
+          if(snowfrac < 0.75) snow_mosaic = 1.
 
        if(newsn > 0. ) SNOWFRACnewsn=MIN(1.,SNHEI/SNHEI_CRIT_newsn)
 
@@ -1640,12 +1653,16 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
              KEEP_SNOW_ALBEDO = 1.
              snow_mosaic=0.  ! ???
       ENDIF
+
 ! Add drip to snow on the ground
       if(drip > 0.) then
        if (snow_mosaic==1.) then
-         dripsn = drip*snowfrac
-         dripnosn=drip*(1.-snowfrac)
+         dripliq=drip*intwratio
+         dripsn = drip - dripliq
          snwe=snwe+dripsn
+         infwater=infwater+dripliq
+         dripliq=0.
+         dripsn = 0.
        else
          snwe=snwe+drip
        endif
@@ -1662,11 +1679,13 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !-- land-use types with higher roughness (forests, urban).
 !5mar12      IF(znt.lt.0.2 .and. snowfrac.gt.0.99) znt=z0tbl(iland)
 !      IF(newsn==0. .and. znt.lt.0.2 .and. snowfrac.gt.0.99) znt=z0tbl(iland)
-      IF(newsn.eq.0. .and. znt.lt.0.2 .and. IVGTYP.ne.isice) then
-         if( snhei .gt. 2.*SNHEI_CRIT .and. snhei .le. 4.*SNHEI_CRIT)then
+      IF(newsn.eq.0. .and. znt.le.0.2 .and. IVGTYP.ne.isice) then
+         if( snhei .le. 2.*ZNT)then
            znt=0.55*znt+0.45*z0tbl(iland)
-         elseif(snhei > 4.*SNHEI_CRIT) then
+         elseif( snhei .gt. 2.*ZNT .and. snhei .le. 4.*ZNT)then
            znt=0.2*znt+0.8*z0tbl(iland)
+         elseif(snhei > 4.*ZNT) then
+           znt=z0tbl(iland)
          endif
        ENDIF
 
@@ -1784,12 +1803,14 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
           smelt=0.
           runoff1s=0.
           runoff2s=0.
+       
+          ilands = ivgtyp
 
          CALL SOIL(spp_lsm,rstochcol,fieldcol_sf,               &
 !--- input variables
-            i,j,iland,isoil,delt,ktau,conflx,nzs,nddzs,nroot,   &
+            i,j,ilands,isoil,delt,ktau,conflx,nzs,nddzs,nroot,   &
             PRCPMS,RAINF,PATM,QVATM,QCATM,GLW,GSWnew,gswin,     &
-            EMISS_snowfree,RNET,QKMS,TKMS,PC,csts,dripnosn,     &
+            EMISS_snowfree,RNET,QKMS,TKMS,PC,csts,dripliq,      &
             infwater,rho,vegfrac,lai,myj,                       &
 !--- soil fixed fields 
             QWRTZ,rhocs,dqm,qmin,ref,wilt,                      &
@@ -6073,7 +6094,7 @@ print *,'INFMAX,INFMAX1,HYDRO(1)*SOILIQW(1),-TOTLIQ', &
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
    print *,'FLXSAT,FLX,DELT',FLXSAT,FLX,DELT,RUNOFF2
     ENDIF
-            RUNOFF2=(FLXSAT-FLX)
+!            RUNOFF2=(FLXSAT-FLX)
             RUNOFF=RUNOFF+(FLXSAT-FLX)
           ELSE
             SOILMOIS(1)=min(dqm,max(1.e-8,QQ))

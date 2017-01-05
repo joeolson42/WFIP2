@@ -442,8 +442,7 @@ BENCH_START(surf_driver_tim)
           HYDRO_dt = -1
       endif
 
-      CALL surface_driver(grid%spp_lsm,grid%pattern_spp_lsm,grid%field_sf,                   &
-     &        grid%spp_pbl,grid%pattern_spp_pbl,& !grid%field_pbl,                &
+      CALL surface_driver(                                                &
      &        HYDRO_dt=HYDRO_dt,  sfcheadrt=grid%sfcheadrt,               &
      &        INFXSRT=grid%INFXSRT,  soldrain=grid%soldrain,              &
      &         ACGRDFLX=grid%acgrdflx  ,ACHFX=grid%achfx        ,ACLHF=grid%aclhf        &
@@ -819,14 +818,18 @@ BENCH_START(surf_driver_tim)
      &        ,GRDFLX_mosaic=grid%GRDFLX_mosaic,SNOTIME_mosaic=grid%SNOTIME_mosaic                      &  !danli mosaic
      &        ,TR_URB2D_mosaic=grid%TR_URB2D_mosaic,TB_URB2D_mosaic=grid%TB_URB2D_mosaic                &  !danli mosaic 
      &        ,TG_URB2D_mosaic=grid%TG_URB2D_mosaic,TC_URB2D_mosaic=grid%TC_URB2D_mosaic                &  !danli mosaic 
-     &        ,QC_URB2D_mosaic=grid%QC_URB2D_mosaic,UC_URB2D_mosaic=grid%UC_URB2D_mosaic                &  !danli mosaic                  
+     &        ,QC_URB2D_mosaic=grid%QC_URB2D_mosaic,UC_URB2D_mosaic=grid%UC_URB2D_mosaic                &  !danli mosaic
      &        ,TRL_URB3D_mosaic=grid%TRL_URB3D_mosaic,TBL_URB3D_mosaic=grid%TBL_URB3D_mosaic            &  !danli mosaic 
      &        ,TGL_URB3D_mosaic=grid%TGL_URB3D_mosaic                                                   &  !danli mosaic 
      &        ,SH_URB2D_mosaic=grid%SH_URB2D_mosaic,LH_URB2D_mosaic=grid%LH_URB2D_mosaic                &  !danli mosaic 
      &        ,G_URB2D_mosaic=grid%G_URB2D_mosaic,RN_URB2D_mosaic=grid%RN_URB2D_mosaic                  &  !danli mosaic 
      &        ,TS_URB2D_mosaic=grid%TS_URB2D_mosaic                                                     &  !danli mosaic 
      &        ,TS_RUL2D_mosaic=grid%TS_RUL2D_mosaic                                                     &  !danli mosaic          
-     &        ,ZOL=grid%ZOL                                                              )
+     &        ,ZOL=grid%ZOL                                                          &
+     &        ,spp_lsm=config_flags%spp_lsm,pattern_spp_lsm=grid%pattern_spp_lsm     & !SPP
+     &        ,field_sf=grid%field_sf                                                & !SPP
+     &        ,spp_pbl=config_flags%spp_pbl,pattern_spp_pbl=grid%pattern_spp_pbl     & !SPP
+     &                                                                   )
 
 #ifdef WRF_HYDRO
         if(HYDRO_dt .gt. 1 ) call wrf_drv_HYDRO(HYDRO_dt, grid,  &
@@ -841,7 +844,7 @@ BENCH_END(surf_driver_tim)
 
       CALL wrf_debug ( 200 , ' call pbl_driver' )
 BENCH_START(pbl_driver_tim)
-      CALL pbl_driver(grid%spp_pbl,grid%pattern_spp_pbl,                           &
+      CALL pbl_driver(                                                              &
      &         AKHS=grid%akhs          ,AKMS=grid%akms                              &
      &        ,BL_PBL_PHYSICS=config_flags%bl_pbl_physics                           &
      &        ,WINDFARM_OPT=config_flags%windfarm_opt,power=grid%power              &
@@ -934,21 +937,24 @@ BENCH_START(pbl_driver_tim)
      &        ,bl_mynn_tkebudget=config_flags%bl_mynn_tkebudget           &
      &        ,bl_mynn_cloudpdf=config_flags%bl_mynn_cloudpdf             &
      &        ,bl_mynn_mixlength=config_flags%bl_mynn_mixlength           &
-     &        ,icloud_bl=config_flags%icloud_bl                           & !JOE: subgrid cloud
-     &        , qc_bl=grid%qc_bl,cldfra_bl=grid%cldfra_bl                 & !JOE: subgrid cloud
-     &        ,bl_mynn_edmf=config_flags%bl_mynn_edmf                     & !JOE- MYNN edmf
-     &        ,bl_mynn_edmf_mom=config_flags%bl_mynn_edmf_mom             & !JOE- MYNN edmf
-     &        ,bl_mynn_edmf_tke=config_flags%bl_mynn_edmf_tke             & !JOE- MYNN edmf
-     &        ,bl_mynn_edmf_part=config_flags%bl_mynn_edmf_part           & !JOE- MYNN edmf
-     &        ,bl_mynn_cloudmix=config_flags%bl_mynn_cloudmix             & !JOE- MYNN cloud mixing
-     &        ,bl_mynn_mixqt=config_flags%bl_mynn_mixqt                   & !JOE- MYNN tendency method
+     &        ,icloud_bl=config_flags%icloud_bl                           &
+     &        , qc_bl=grid%qc_bl,cldfra_bl=grid%cldfra_bl                 &
+     &        ,bl_mynn_edmf=config_flags%bl_mynn_edmf                     &
+     &        ,bl_mynn_edmf_mom=config_flags%bl_mynn_edmf_mom             &
+     &        ,bl_mynn_edmf_tke=config_flags%bl_mynn_edmf_tke             &
+     &        ,bl_mynn_edmf_part=config_flags%bl_mynn_edmf_part           &
+     &        ,bl_mynn_cloudmix=config_flags%bl_mynn_cloudmix             &
+     &        ,bl_mynn_mixqt=config_flags%bl_mynn_mixqt                   &
      &        ,edmf_a=grid%edmf_a,edmf_w=grid%edmf_w                      &
      &        ,edmf_thl=grid%edmf_thl,edmf_qt=grid%edmf_qt                &
-     &        ,edmf_ent=grid%edmf_ent,edmf_qc=grid%edmf_qc                & !JOE- MYNN edmf 
+     &        ,edmf_ent=grid%edmf_ent,edmf_qc=grid%edmf_qc                &
      &        ,rmol=grid%rmol, ch=grid%ch                                 &
      &        ,qcg=grid%qcg, grav_settling=config_flags%grav_settling     &
 !    &        ,K_m=grid%K_m, K_h=grid%K_h, K_q=grid%K_q                   &
-     &        ,vdfg=grid%vdfg                                             & ! Katata - fogdep
+     &        ,vdfg=grid%vdfg,nupdraft=grid%nupdraft,maxMF=grid%maxmf     &
+     &        ,ktop_shallow=grid%ktop_shallow                             &
+     &        ,spp_pbl=config_flags%spp_pbl                               & !SPP
+     &        ,pattern_spp_pbl=grid%pattern_spp_pbl                       & !SPP
 !GWD for ARW
      &        ,GWD_OPT=config_flags%gwd_opt &
      &        ,DTAUX3D=grid%dtaux3d,DTAUY3D=grid%dtauy3d &

@@ -5,7 +5,7 @@ MODULE module_sf_mynn
 
 !-------------------------------------------------------------------
 !Modifications implemented by Joseph Olson NOAA/GSD/AMB - CU/CIRES
-!for WRFv3.4, v3.4.1, v3.5.1, v3.6, and v3.7.1:
+!for WRFv3.4, v3.4.1, v3.5.1, v3.6, v3.7.1, and v3.9:
 !
 !   BOTH LAND AND WATER:
 !1) Calculation of stability parameter (z/L) taken from Li et al. (2010 BLM)
@@ -45,6 +45,9 @@ MODULE module_sf_mynn
 !   2) added a more elaborate diagnostic for u10 & V10 for high vertical resolution
 !      model configurations.
 !
+! New for v3.9:
+!   - option for stochastic parameter perturbations (SPP) 
+!
 !NOTE: This code was primarily tested in combination with the RUC LSM.
 !      Performance with the Noah (or other) LSM is relatively unknown.
 !-------------------------------------------------------------------
@@ -83,8 +86,8 @@ CONTAINS
   END SUBROUTINE mynn_sf_init_driver
 
 !-------------------------------------------------------------------
-   SUBROUTINE SFCLAY_mynn(spp_pbl,pattern_spp_pbl,           &
-                     U3D,V3D,T3D,QV3D,P3D,dz8w,               &
+   SUBROUTINE SFCLAY_mynn(                                         &
+                     U3D,V3D,T3D,QV3D,P3D,dz8w,                    &
                      CP,G,ROVCP,R,XLV,PSFCPA,CHS,CHS2,CQS2,CPM,    &
                      ZNT,UST,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH, &
                      XLAND,HFX,QFX,LH,TSK,FLHC,FLQC,QGH,QSFC,RMOL, &
@@ -94,9 +97,7 @@ CONTAINS
                      KARMAN,itimestep,ch,th3d,pi3d,qc3d,rho3d,     &
                      tsq,qsq,cov,sh3d,el_pbl,qcg,                  &
                      icloud_bl,qc_bl,cldfra_bl,                    &
-!JOE-add output
-!                     z0zt_ratio,BulkRi,wstar,qstar,resist,logres,  &
-!JOE-end 
+                     spp_pbl,pattern_spp_pbl,                      &
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
@@ -403,8 +404,8 @@ CONTAINS
            ENDDO
         ENDIF
 
-        CALL SFCLAY1D_mynn(spp_pbl,rstoch1D,                  &
-                J,U1D,V1D,T1D,QV1D,P1D,dz8w1d,rho1d,    &
+        CALL SFCLAY1D_mynn(                                        &
+                J,U1D,V1D,T1D,QV1D,P1D,dz8w1d,rho1d,               &
                 U1D2,V1D2,dz2w1d,                                  &
                 CP,G,ROVCP,R,XLV,PSFCPA(ims,j),CHS(ims,j),CHS2(ims,j),&
                 CQS2(ims,j),CPM(ims,j),PBLH(ims,j), RMOL(ims,j),   &
@@ -422,6 +423,7 @@ CONTAINS
                 z0zt_ratio(ims,j),wstar(ims,j),                    &
                 qstar(ims,j),resist(ims,j),logres(ims,j),          &
 !JOE-end
+                spp_pbl,rstoch1D,                                  &
                 ids,ide, jds,jde, kds,kde,                         &
                 ims,ime, jms,jme, kms,kme,                         &
                 its,ite, jts,jte, kts,kte                          &
@@ -435,8 +437,8 @@ CONTAINS
     END SUBROUTINE SFCLAY_MYNN
 
 !-------------------------------------------------------------------
-   SUBROUTINE SFCLAY1D_mynn(spp_pbl,rstoch1D,   &
-                     J,U1D,V1D,T1D,QV1D,P1D,dz8w1d,rho1d,   &
+   SUBROUTINE SFCLAY1D_mynn(                                       &
+                     J,U1D,V1D,T1D,QV1D,P1D,dz8w1d,rho1d,          &
                      U1D2,V1D2,dz2w1d,                             &
                      CP,G,ROVCP,R,XLV,PSFCPA,CHS,CHS2,CQS2,CPM,    &
                      PBLH,RMOL,ZNT,UST,MAVAIL,ZOL,MOL,REGIME,      &
@@ -449,6 +451,7 @@ CONTAINS
 !JOE-additional output
                      zratio,wstar,qstar,resist,logres,             &
 !JOE-end
+                     spp_pbl,rstoch1D,                             &
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte                     &

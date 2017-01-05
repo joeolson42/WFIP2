@@ -978,6 +978,8 @@ state   real   edmf_thl        ikj     misc        1         -      ih         "
 state   real   edmf_qt         ikj     misc        1         -      ih         "edmf_qt"          "EDMF qt  - mean moist updrafts" "kg kg-1"
 state   real   edmf_ent        ikj     misc        1         -      ih         "edmf_ent"          "EDMF entrainment  - mean moist updrafts" "m-1"
 state   real   edmf_qc         ikj     misc        1         -      ih         "edmf_qc"           "EDMF qc - mean moist updrafts" "kg kg-1"
+state   integer  nupdraft       ij     misc        1         -      ih        "nupdraft"           "Number of updrafts (neg: all dry, pos: moist)"    ""
+state   real   maxMF            ij     misc        1         -      ih        "maxMF"              "Maximum mass-flux"    "m/s * area"
 
 #FogDES variables
 state   real   fgdp             ij     misc        1         -      -        "fgdp"                "Accumulated fog deposition"    "mm"
@@ -1957,7 +1959,7 @@ rconfig   integer diag_print              namelist,time_control         1       
 rconfig   logical nocolons                namelist,time_control         1             .false. -    "nocolons"
 rconfig   logical cycling                 namelist,time_control         1             .false. -    "true for cycling (using wrfout file as input data)"
 rconfig   integer output_diagnostics      namelist,time_control         1              0
-rconfig   integer wind_int                namelist,time_control         1              0
+rconfig   integer wind_int                namelist,time_control         1              5
 rconfig   integer diag_int                namelist,time_control         1             15
 rconfig   integer nwp_diagnostics         namelist,time_control         1              0
 rconfig   logical output_ready_flag       namelist,time_control         1             .false. -    "drop a flag called wrfoutReady_d<domain>_<date> after history write" "" ""
@@ -2740,14 +2742,15 @@ package   gbmpblscheme   bl_pbl_physics==12          -             state:exch_tk
 package   mrfscheme      bl_pbl_physics==99          -             -
 
 package   mynn_tkebudget bl_mynn_tkebudget==1        -             state:qSHEAR,qBUOY,qDISS,qWT,dqke
-package   mynn_stem_edmf bl_mynn_edmf==1            -              state:edmf_a,edmf_w,edmf_thl,edmf_qt,edmf_ent,edmf_qc
+package   mynn_stem_edmf bl_mynn_edmf==1            -              state:edmf_a,edmf_w,edmf_thl,edmf_qt,edmf_ent,edmf_qc,ktop_shallow,maxmf,nupdraft
 package   mynn_temf_edmf bl_mynn_edmf==2            -              state:edmf_a,edmf_w,edmf_thl,edmf_qt,edmf_ent,edmf_qc
 package   sg_cloud       icloud_bl==1                -             state:cldfra_bl,qc_bl
 
 package   nocuscheme     cu_physics==0               -             -
 package   kfetascheme    cu_physics==1               -             state:w0avg
 package   bmjscheme      cu_physics==2               -             -
-package   gfscheme       cu_physics==3               -             state:cugd_qvten,cugd_tten,cugd_qvtens,cugd_ttens,cugd_qcten,xmb_shallow,k22_shallow,kbcon_shallow,ktop_shallow
+#package   gfscheme       cu_physics==3               -             state:cugd_qvten,cugd_tten,cugd_qvtens,cugd_ttens,cugd_qcten,xmb_shallow,k22_shallow,kbcon_shallow,ktop_shallow
+package   gfscheme       cu_physics==3               -             state:xmb_shallow,k22_shallow,kbcon_shallow,ktop_shallow
 package   osasscheme     cu_physics==4               -             -
 package   g3scheme       cu_physics==5               -             state:cugd_qvten,cugd_tten,cugd_qvtens,cugd_ttens,cugd_qcten,xmb_shallow,k22_shallow,kbcon_shallow,ktop_shallow
 package   tiedtkescheme  cu_physics==6               -             -
