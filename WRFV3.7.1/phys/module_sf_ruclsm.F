@@ -1505,6 +1505,8 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
       print *, 'THERE IS NEW SNOW, newsn', newsn
     ENDIF
 
+        newsnowratio = min(1.,newsn/(snwe+newsn))
+
 !*** Calculate fresh snow density (t > -15C, else MIN value)
 !*** Eq. 10 from Koren et al. (1999)
 !--- old formulation from Koren (1999)
@@ -1582,17 +1584,17 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
           CST=SAT
           DRIP=DD1-SAT
         ENDIF
-      else
-          CST=0.
-          DRIP=0.
-          interw=0.
-          intersn=0.
-          infwater=PRCPMS
-      endif ! vegfrac > 0.01
+     else
+         CST=0.
+         DRIP=0.
+         interw=0.
+         intersn=0.
+         infwater=PRCPMS
+     endif ! vegfrac > 0.01
 
        IF(NEWSN.GT.0.) THEN
 !Update snow on the ground
-         snwe=snwe+newsn-intersn
+         snwe=max(0.,snwe+newsn-intersn)
 !      if(drip > 0.) then
 !       if (snow_mosaic==1.) then
 !         dripsn = drip*snowfrac
@@ -1602,7 +1604,19 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !         snwe=snwe+drip
 !       endif
 !      endif
-!         newsnowratio = min(1.,newsn/snwe)
+! Add drip to snow on the ground
+      if(drip > 0.) then
+       if (snow_mosaic==1.) then
+         dripliq=drip*intwratio
+         dripsn = drip - dripliq
+         snwe=snwe+dripsn
+         infwater=infwater+dripliq
+         dripliq=0.
+         dripsn = 0.
+       else
+         snwe=snwe+drip
+       endif
+      endif
          snhei=snwe*rhowater/rhosn
          NEWSN=NEWSN*rhowater/rhonewsn
        ENDIF
@@ -1653,22 +1667,6 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
              KEEP_SNOW_ALBEDO = 1.
              snow_mosaic=0.  ! ???
       ENDIF
-
-! Add drip to snow on the ground
-      if(drip > 0.) then
-       if (snow_mosaic==1.) then
-         dripliq=drip*intwratio
-         dripsn = drip - dripliq
-         snwe=snwe+dripsn
-         infwater=infwater+dripliq
-         dripliq=0.
-         dripsn = 0.
-       else
-         snwe=snwe+drip
-       endif
-      endif
-         newsnowratio = min(1.,newsn/snwe)
-         snhei=snwe*rhowater/rhosn
 
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
       print *,'SNHEI_CRIT,SNOWFRAC,SNHEI_CRIT_newsn,SNOWFRACnewsn', &
