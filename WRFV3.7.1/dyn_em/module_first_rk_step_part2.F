@@ -286,7 +286,7 @@ CONTAINS
                            grid%stddev_cutoff_spp_pbl,grid%gridpt_stddev_spp_pbl, & 
                            grid%VERTSTRUCC,grid%VERTSTRUCS,grid%VERTAMPT       )
       ENDIF !spp_pbl
-      if ((grid%spp_lsm==1).and.(grid%id .EQ. 1 )) then
+      if ((grid%spp_lsm==1).and.(grid%id .EQ. 1).and.(grid%itimestep .lt. 5)) then
            CALL RAND_PERT_UPDATE(grid,'T',                                     &
                            grid%SPFORCS4,grid%SPFORCC4,                        &
                            grid%SP_AMP4,grid%ALPH_RAND4,                       &

@@ -9,7 +9,7 @@ MODULE module_cu_gf_deep
 ! parameter to turn on or off evaporation of rainwater as done in SAS
      integer, parameter :: irainevap=0
 ! max allowed fractional coverage (frh_thresh)
-     real, parameter::frh_thresh = .7
+     real, parameter::frh_thresh = .9
 ! rh threshold. if fractional coverage ~ frh_thres, do not use cupa any further
      real, parameter::rh_thresh = .97
 ! tuning constant for J. Brown closure (Ichoice = 4,5,6)
@@ -306,7 +306,7 @@ contains
        up_massentr,up_massdetr,c1d                                        &
       ,up_massentro,up_massdetro,dd_massentro,dd_massdetro
      real,    dimension (its:ite,kts:kte) ::                              &
-       up_massentru,up_massdetru
+       up_massentru,up_massdetru,dd_massentru,dd_massdetru
      real buo_flux,pgcon,pgc,blqe
     
      real :: xff_mid(its:ite,2)
@@ -395,7 +395,7 @@ contains
         if(xland(i).gt.1.5 .or. xland(i).lt.0.5)then
             xland1(i)=0
 !            if(imid.eq.0)cap_max(i)=cap_maxs-25.
-            if(imid.eq.1)cap_max(i)=cap_maxs-50.
+!            if(imid.eq.1)cap_max(i)=cap_maxs-50.
             cap_max_increment(i)=20.
         else
             if(ztexec(i).gt.0.)cap_max(i)=cap_max(i)+25.
@@ -433,7 +433,7 @@ contains
          if(imid.eq.1)entr_rate(i)=1.e-4
 !         if(imid.eq.1)c1d(i,:)=c1
          radius=.2/entr_rate(i)
-         frh=3.14*radius*radius/dx(i)/dx(i)
+         frh=min(1.,3.14*radius*radius/dx(i)/dx(i))
          if(frh > frh_thresh)then
             frh=frh_thresh
             radius=sqrt(frh*dx(i)*dx(i)/3.14)
@@ -688,6 +688,7 @@ contains
                  do k=kbcon(i)+1,ktf
                   if((po_cup(i,k22(i))-po_cup(i,k)).gt.500.)then
                     ktop(i)=k
+                    ktopdby(i)=ktop(i)
                     exit
                   endif
                  enddo
@@ -935,6 +936,8 @@ contains
        cdd(i,k)=0.
        dd_massentro(i,k)=0.
        dd_massdetro(i,k)=0.
+       dd_massentru(i,k)=0.
+       dd_massdetru(i,k)=0.
        hcdo(i,k)=heso_cup(i,k)
        ucd(i,k)=u_cup(i,k)
        vcd(i,k)=v_cup(i,k)
@@ -956,7 +959,7 @@ contains
         cdd(i,jmin(i))=0.
         dd_massdetro(i,:)=0.
         dd_massentro(i,:)=0.
-        call get_zu_zd_pdf_fim(po_cup(i,:),rand_vmas(i),0.,ipr,xland1(i),zuh2,"DOWN",ierr(i),kdet(i),jmin(i),zdo(i,:),kts,kte,ktf,beta,kpbl(i),csum(i),pmin_lev(i))
+        call get_zu_zd_pdf_fim(0,po_cup(i,:),rand_vmas(i),0.,ipr,xland1(i),zuh2,"DOWN",ierr(i),kdet(i),jmin(i),zdo(i,:),kts,kte,ktf,beta,kpbl(i),csum(i),pmin_lev(i))
         if(zdo(i,jmin(i)) .lt.1.e-8)then
           zdo(i,jmin(i))=0.
           jmin(i)=jmin(i)-1
@@ -1017,21 +1020,25 @@ contains
 
 
 ! downdraft moist static energy + moisture budget
+          do k=2,jmin(i)+1
+           dd_massentru(i,k-1)=dd_massentro(i,k-1)+lambau(i)*dd_massdetro(i,k-1)
+           dd_massdetru(i,k-1)=dd_massdetro(i,k-1)+lambau(i)*dd_massdetro(i,k-1)
+          enddo
             dbydo(i,jmin(i))=hcdo(i,jmin(i))-heso_cup(i,jmin(i))
             bud(i)=dbydo(i,jmin(i))*(zo_cup(i,jmin(i)+1)-zo_cup(i,jmin(i)))
             do ki=jmin(i)  ,1,-1
              dzo=zo_cup(i,ki+1)-zo_cup(i,ki)
              h_entr=.5*(heo(i,ki)+.5*(hco(i,ki)+hco(i,ki+1)))
              ucd(i,ki)=(ucd(i,ki+1)*zdo(i,ki+1)                                   &
-                         -.5*dd_massdetro(i,ki)*ucd(i,ki+1)+                      &
-                        dd_massentro(i,ki)*us(i,ki)                               &
+                         -.5*dd_massdetru(i,ki)*ucd(i,ki+1)+                      &
+                        dd_massentru(i,ki)*us(i,ki)                               &
                         -pgcon*zdo(i,ki+1)*(us(i,ki+1)-us(i,ki)))   /             &
-                        (zdo(i,ki+1)-.5*dd_massdetro(i,ki)+dd_massentro(i,ki))
+                        (zdo(i,ki+1)-.5*dd_massdetru(i,ki)+dd_massentru(i,ki))
              vcd(i,ki)=(vcd(i,ki+1)*zdo(i,ki+1)                                   &
-                         -.5*dd_massdetro(i,ki)*vcd(i,ki+1)+                      &
-                        dd_massentro(i,ki)*vs(i,ki)                               &
+                         -.5*dd_massdetru(i,ki)*vcd(i,ki+1)+                      &
+                        dd_massentru(i,ki)*vs(i,ki)                               &
                         -pgcon*zdo(i,ki+1)*(vs(i,ki+1)-vs(i,ki)))   /             &
-                        (zdo(i,ki+1)-.5*dd_massdetro(i,ki)+dd_massentro(i,ki))
+                        (zdo(i,ki+1)-.5*dd_massdetru(i,ki)+dd_massentru(i,ki))
              hcdo(i,ki)=(hcdo(i,ki+1)*zdo(i,ki+1)                                 &
                          -.5*dd_massdetro(i,ki)*hcdo(i,ki+1)+                     &
                         dd_massentro(i,ki)*h_entr)   /                            &
@@ -1159,7 +1166,7 @@ contains
             if(ierr(i).eq.0)then
 
                !- only for convection rooting in the PBL
-               if(zo_cup(i,kbcon(i))-z1(i) > zo(i,kpbl(i)-1)) then 
+               if(zo_cup(i,kbcon(i))-z1(i) > zo(i,kpbl(i)+1)) then 
                   aa1_bl(i) = 0.0
                else
                !- multiply aa1_bl the " time-scale" - tau_bl
@@ -1379,15 +1386,11 @@ contains
              dellu(i,k) =-(zuo(i,k+1)*(uc (i,k+1)-u_cup(i,k+1) ) -                               &
                             zuo(i,k  )*(uc (i,k  )-u_cup(i,k  ) ) )*g/dp                         &
                           +(zdo(i,k+1)*(ucd(i,k+1)-u_cup(i,k+1) ) -                              &
-                            zdo(i,k  )*(ucd(i,k  )-u_cup(i,k  ) ) )*g/dp*edto(i)*pgcd            &
-                     +(pgc*.5*(zuo(i,k)+zuo(i,k+1))*(u_cup(i,k+1)-u_cup(i,k))                    &
-                     + pgcd*pgc*.5*edto(i)*(zdo(i,k)+zdo(i,k+1))*(u_cup(i,k+1)-u_cup(i,k)))*g/dp
+                            zdo(i,k  )*(ucd(i,k  )-u_cup(i,k  ) ) )*g/dp*edto(i)*pgcd
              dellv(i,k) =-(zuo(i,k+1)*(vc (i,k+1)-v_cup(i,k+1) ) -                               &
                             zuo(i,k  )*(vc (i,k  )-v_cup(i,k  ) ) )*g/dp                         &
                          +(zdo(i,k+1)*(vcd(i,k+1)-v_cup(i,k+1) ) -                               &
-                            zdo(i,k  )*(vcd(i,k  )-v_cup(i,k  ) ) )*g/dp*edto(i)*pgcd            &
-                     +(pgc*.5*(zuo(i,k)+zuo(i,k+1))*(v_cup(i,k+1)-v_cup(i,k))                    &
-                     + pgcd*pgc*.5*edto(i)*(zdo(i,k)+zdo(i,k+1))*(v_cup(i,k+1)-v_cup(i,k)))*g/dp
+                            zdo(i,k  )*(vcd(i,k  )-v_cup(i,k  ) ) )*g/dp*edto(i)*pgcd
  
        enddo   ! k
 
@@ -1435,7 +1438,7 @@ contains
         
             !-- take out cloud liquid water for detrainment
             detup=up_massdetro(i,k)
-            dz=zo_cup(i,k+1)-zo_cup(i,k)
+            dz=zo_cup(i,k)-zo_cup(i,k-1)
             if(k.lt.ktop(i)) dellaqc(i,k) = zuo(i,k)*c1d(i,k)*qrco(i,k)*dz/dp*g 
 !             dellaqc(i,k)=  detup*0.5*(qrco(i,k+1)+qrco(i,k)) *g/dp
             if(k.eq.ktop(i))dellaqc(i,k)= detup*0.5*(qrco(i,k+1)+qrco(i,k)) *g/dp
@@ -1774,15 +1777,15 @@ contains
           if(ierr(i).eq.0) then
              dts=0.
              fpi=0.
-             do k=kts+1,ktop(i)
-                dp=-.5*(po(i,k+1)-po(i,k-1))*100.
+             do k=kts,ktop(i)
+                dp=(po_cup(i,k)-po_cup(i,k+1))*100.
 !total KE dissiptaion estimate
-                dts= dts +(outu(i,k)*us(i,k)+outv(i,k)*vs(i,k))*dp/g
+                dts= dts -(outu(i,k)*us(i,k)+outv(i,k)*vs(i,k))*dp/g
 ! fpi needed for calcualtion of conversion to pot. energyintegrated 
                 fpi = fpi  +sqrt(outu(i,k)*outu(i,k) + outv(i,k)*outv(i,k))*dp
              enddo
              if(fpi.gt.0.)then
-                do k=kts+1,ktop(i)
+                do k=kts,ktop(i)
                    fp= sqrt((outu(i,k)*outu(i,k)+outv(i,k)*outv(i,k)))/fpi
                    outt(i,k)=outt(i,k)+fp*dts*g/cp
                 enddo
@@ -3203,7 +3206,7 @@ contains
 !       closures over water) to properly normalize xmb
            clos_wei=16./max(1.,closure_n(i))
          xmb_ave(i)=min(xmb_ave(i),100.)
-         xmb(i)=clos_wei*sig(i)*xmb_ave(i) !*betajb
+         xmb(i)=clos_wei*sig(i)*xmb_ave(i)
 
            if(xmb(i) < 1.e-16)then
               ierr(i)=19
@@ -3371,7 +3374,7 @@ contains
 !
         prop_b(kts:kte)=0
         iall=0
-        c0=.004
+        c0=.002
         bdsp=BDISPM
 !
 !--- no precip for small clouds
@@ -3636,9 +3639,9 @@ contains
      !-local vars
      real, dimension (its:ite,kts:kte) :: hcot
      real :: beta_u,dz,dbythresh,dzh2,zustart,zubeg,massent,massdetr
-     real :: dby(kts:kte),zux(kts:kte)
+     real :: dby(kts:kte),dbm(kts:kte),zux(kts:kte)
      real zuh2(40),zh2(40)
-     integer :: i,kk,kbegin,k,kfinalzu
+     integer :: kklev,i,kk,kbegin,k,kfinalzu
      integer, dimension (its:ite) :: start_level 
      !
      zustart=.1
@@ -3651,6 +3654,7 @@ contains
       beta_u=max(.1,.2-float(csum(i))*.01)
       zuo(i,:)=0.
       dby(:)=0.
+      dbm(:)=0.
       kbcon(i)=max(kbcon(i),2)
       if(ierr(i).eq.0)then
        start_level(i)=k22(i)
@@ -3675,8 +3679,10 @@ contains
                       + entr_rate_2d(i,k-1)*dz*heo(i,k-1))/        &
                       (1.+0.5*entr_rate_2d(i,k-1)*dz)
            if(k >= kbcon(i)) dby(k)=dby(k-1)+(hcot(i,k)-heso_cup(i,k))*dz
+           if(k >= kbcon(i)) dbm(k)=hcot(i,k)-heso_cup(i,k)
         enddo
         ktopdby(i)=maxloc(dby(:),1)
+        kklev=maxloc(dbm(:),1)
         do k=maxloc(dby(:),1)+1,ktf-2
           if(dby(k).lt.dbythresh*maxval(dby))then
               kfinalzu=k  - 1
@@ -3699,7 +3705,7 @@ contains
 !           call get_zu_zd_pdf_fim(ipr,xland(i),zuh2,"UP",ierr(i),start_level(i),             &
 !           call get_zu_zd_pdf_fim(rand_vmas(i),zubeg,ipr,xland(i),zuh2,"UP",ierr(i),kbcon(i), &
 !            kfinalzu,zuo(i,kts:kte),kts,kte,ktf,beta_u,kpbl(i),csum(i),pmin_lev(i))
-           call get_zu_zd_pdf_fim(p_cup(i,:),rand_vmas(i),zubeg,ipr,xland(i),zuh2,"UP",ierr(i),k22(i), &
+           call get_zu_zd_pdf_fim(kklev,p_cup(i,:),rand_vmas(i),zubeg,ipr,xland(i),zuh2,"UP",ierr(i),k22(i), &
             kfinalzu,zuo(i,kts:kte),kts,kte,ktf,beta_u,kstabi(i),csum(i),pmin_lev(i))
         endif
       endif ! end deep
@@ -3710,7 +3716,7 @@ contains
        else
            kfinalzu=ktop(i)
            ktopdby(i)=ktop(i)+1
-          call get_zu_zd_pdf_fim(p_cup(i,:),rand_vmas(i),zubeg,ipr,xland(i),zuh2,"MID",ierr(i),k22(i),kfinalzu,zuo(i,kts:kte),kts,kte,ktf,beta_u,kbcon(i),csum(i),pmin_lev(i))
+          call get_zu_zd_pdf_fim(kklev,p_cup(i,:),rand_vmas(i),zubeg,ipr,xland(i),zuh2,"MID",ierr(i),k22(i),kfinalzu,zuo(i,kts:kte),kts,kte,ktf,beta_u,kbcon(i),csum(i),pmin_lev(i))
 !           kbegin=0
 !           dzh2=(z_cup(i,ktop(i))-z_cup(i,k22(i)))/40.
 !           zh2(1)=z_cup(i,k22(i))
@@ -3738,7 +3744,7 @@ contains
        else
            kfinalzu=ktop(i)
            ktopdby(i)=ktop(i)
-           call get_zu_zd_pdf_fim(p_cup(i,:),rand_vmas(i),zubeg,ipr,xland(i),zuh2,"SH2",ierr(i),k22(i), &
+           call get_zu_zd_pdf_fim(kklev,p_cup(i,:),rand_vmas(i),zubeg,ipr,xland(i),zuh2,"SH2",ierr(i),k22(i), &
              kfinalzu,zuo(i,kts:kte),kts,kte,ktf,beta_u,kpbl(i),csum(i),pmin_lev(i))
 
          endif
@@ -3748,10 +3754,10 @@ contains
 
   END SUBROUTINE rates_up_pdf
 !-------------------------------------------------------------------------
- SUBROUTINE get_zu_zd_pdf_fim(p,rand_vmas,zubeg,ipr,xland,zuh2,draft,ierr,kb,kt,zu,kts,kte,ktf,max_mass,kpbli,csum,pmin_lev)
+ SUBROUTINE get_zu_zd_pdf_fim(kklev,p,rand_vmas,zubeg,ipr,xland,zuh2,draft,ierr,kb,kt,zu,kts,kte,ktf,max_mass,kpbli,csum,pmin_lev)
 
  implicit none
- integer, intent(in) ::ipr,xland,kb,kt,kts,kte,ktf,kpbli,csum,pmin_lev
+ integer, intent(in) ::ipr,xland,kb,kklev,kt,kts,kte,ktf,kpbli,csum,pmin_lev
  real, intent(in) ::max_mass,zubeg
  real, intent(inout) :: zu(kts:kte)
  real, intent(in) :: p(kts:kte)
@@ -3769,7 +3775,7 @@ contains
  zuh=0.0
    kb_adj=max(kb,2)
  IF(draft == "UP") then
-   lev_start=min(.9,.4+csum*.033)
+   lev_start=min(.9,.4+csum*.013)
    kb_adj=max(kb,2)
    tunning=p(kt)+(p(kpbli)-p(kt))*lev_start
    tunning =min(0.9, (tunning-p(kb_adj))/(p(kt)-p(kb_adj))) !=.6
@@ -3829,7 +3835,7 @@ contains
       zuh2(:)= zuh2(:)/ maxval(zuh2(1:40))
  ELSEIF(draft == "MID") then
    kb_adj=max(kb,2)
-   tunning=p(kt)+(p(kb_adj)-p(kt))*.7 !*.33
+   tunning=p(kt)+(p(kb_adj)-p(kt))*.9 !*.33
    tunning =min(0.9, (tunning-p(kb_adj))/(p(kt)-p(kb_adj))) !=.6
    tunning =max(0.2, tunning)
    beta    = 1.3 !2.5 ! max(2.5,2./tunning)
