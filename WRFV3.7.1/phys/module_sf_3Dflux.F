@@ -1,6 +1,6 @@
 ! WRF:MODEL_LAYER:PHYSICS
  
-    MODULE module_3Dsfcflux
+    MODULE module_sf_3Dflux
 
     USE module_bc, only: set_physical_bc3d
     USE module_state_description, only: p_m23, p_m13, p_m22, p_m33, p_r23, p_r13, p_r12, p_m12, p_m11
@@ -122,17 +122,11 @@ c----------------------------------------------------------------------
               spongz,spongxy,viscous,outflow_only,outflowx0,outflowxl,&
               outflowy0,outflowyl,nested,symx0,symxl,symy0,symyl,   &
               perx,pery,constk
-      common /lflags/ top_radiation,twod,mixing,bouss,hydrostatic,  &
-              spongz,spongxy,viscous,outflow_only,outflowx0,        &
-              outflowxl,outflowy0,outflowyl,nested,symx0,symxl,     &
-              symy0,symyl,perx,pery,constk
 c----------------------------------------------------------------------
 c Integer constants
 c----------------------------------------------------------------------
       integer nsm,bcx,bcy,bcz,opts_spec,type_terrain,idiag,hflux_opt,&
               drag_opt
-      common /iconstlist/ nsm,bcx,bcy,bcz,opts_spec,type_terrain,   &
-           idiag,hflux_opt,drag_opt
 c----------------------------------------------------------------------
 c Real constants 
 c----------------------------------------------------------------------
@@ -142,22 +136,14 @@ c----------------------------------------------------------------------
            coriol,lmda1,lmda2,lmda3,thets,pis,Nsrf,shxc,shyc,shlx,    &
            shly,shlz,shamp,shfreq,shramp,rdiag,rdiag2,bet,dusrf,cdmax,&
            cdmin,sdxc,sdyc,sdlx,sdly
-      common /rconstlist/ gx0,gy0,gx1,gy1,dt,dx,dy,dz,dzbot,um,vm,    &
-           dxt,eps0,eps1,tf0,tf1,fdamph,alowk0,rayd_hgt,rayd_mag,     &
-           dmpxy_l,dmpxy_a,rprndl,Cm,ahighk,psfc,dts,rdt,rdx,rdy,rdz, &
-           dtbydx,dtbydy,dtbydz,coriol,lmda1,lmda2,lmda3,thets,pis,   &
-           Nsrf,shxc,shyc,shlx,shly,shlz,shamp,shfreq,shramp,rdiag,   &
-           rdiag2,bet,dusrf,cdmax,cdmin,sdxc,sdyc,sdlx,sdly
 c----------------------------------------------------------------------
 c X1D arrays
 c----------------------------------------------------------------------
       real sgx(nmax),ugx(nmax),xbnd(nmax),xrbnd(nmax),xlbnd(nmax)
-      common /x1dlist/ sgx,ugx,xbnd,xrbnd,xlbnd
 c----------------------------------------------------------------------
 c Y1D arrays
 c----------------------------------------------------------------------
       real sgy(nmax),vgy(nmax),ybnd(nmax),yrbnd(nmax),ylbnd(nmax)
-      common /y1dlist/ sgy,vgy,ybnd,yrbnd,ylbnd
 c----------------------------------------------------------------------
 c Z1D arrays
 c----------------------------------------------------------------------
@@ -171,51 +157,63 @@ c----------------------------------------------------------------------
            cs2(kme),dzc(-2:kme+3),dalfac(-2:kme+3),                   &
            darfac(-2:kme+3),km_min(kme),km_max(kme),                  &
            csmths(kme,5),csmthw(kme,5)
-      common /z1dlist/ sgz,wgz,mfc,mfe,zbnd,zlbnd,zrbnd,zlbndw,zrbndw,&
-           alowk,delta,kmh,kmz,atri,btri,ctri,atrb,btrb,ctrb,gam,     &
-           aterm,rayd,uinit,vinit,winit,sinit,piinit,rhinit,thalf,cs2,&
-           dzc,dalfac,darfac,km_min,km_max,csmths,csmthw
+
 c----------------------------------------------------------------------
 c Terrain coordinate transformation arrays:
 c   1: therm pts    2: u pts     3: v pts
-c----------------------------------------------------------------------
-
+c-----------------------------
+-----------------------------------------
       real dqdz(ime,jme,3),dzdq(ime,jme,3)
       real dqdx_xy(ime,jme,3),dqdy_xy(ime,jme,3)
       real dqdx_zt(kme),dqdy_zt(kme),dqdx_zw(kme),dqdy_zw(kme)
-      common /metrics/ dqdz,dzdq,dqdx_xy,dqdy_xy,dqdx_zt,dqdy_zt,     &
-                       dqdx_zw,dqdy_zw
 c----------------------------------------------------------------------
 c Arrays for surface stress definitions
 c----------------------------------------------------------------------
       real xsdu(ime,jme),ysdu(ime,jme),dsu(ime,jme)
       real xsdv(ime,jme),ysdv(ime,jme),dsv(ime,jme)
-      common /stress/ xsdu,ysdu,dsu,xsdv,ysdv,dsv
 c----------------------------------------------------------------------
 c Sponge layer arrays
 c----------------------------------------------------------------------
       real rdmpxy(ime,jme,3)
-      common /sponge/ rdmpxy
 
 
-      common/info/cstep,dxf,dyf,dtf
       integer cstep
       real dxf,dyf,dtf
 !----------------------------------------------------------------------
       integer iconst(nsint),nx,ny,nz
       real rconst(nsreal),x1d(nx,nx1d),y1d(ny,ny1d),z1d(nz,nz1d)
-      real zbot(nx,ny,3)
+      real zbot(ime,jme,3)
 !----------------------------------------------------------------------
       real tvinit(kme) 
 !      real    pltmp(nmax,nmax)
       real fdamph0,alpha,timefilt,pr
-      integer i,j,k,n,km1,iconv,maxit
+      integer n,km1,iconv,maxit
       real dtl,dxd,dzd,dz1,avg0,avg1,gammai,zdif,z0,zfac,dz2,avg2
       real dztmp,ztop,dz0,x,y,z,xd0,yd0,xdl,ydl,del
       real x_0,y_0,z_0,x_scale,y_scale,z_scale,x_scale2,y_scale2,y_len
       real xsrf,ysrf,zsrf,h0,n1,n2,n3,gamm,tol,res,h_surf
 
+
+!used in slip solve
 ! Local variables.
+      real us(ime,jme),vs(ime,jme),resu(ime,jme),resv(ime,jme)
+      real pcru(ime,jme),pcrv(ime,jme),lpu(ime,jme),lpv(ime,jme)
+      real lru(ime,jme),lrv(ime,jme),dragx(ime,jme),dragy(ime,jme)
+
+      real u0(ime,jme,nz),v0(ime,jme,nz),km(ime,jme,nz)
+      real zbot(ime,jme,3),time
+
+      integer ii,im1,jj,jm1,istop,maxits,iperx,ipery
+      real eps,resmax,restol,beta,alpha,rhsmax
+      real gamm,n1,n2,n3,kmsrf,dudz,dvdz
+      double precision lplp,rlp,lplr
+      parameter (maxits=500,eps=5.e-5)
+
+
+
+      !used in SLIP_COEFF
+      real ucof(ime,jme,10),vcof(ime,jme,10)
+
 
     INTEGER  &
     :: i, j, k, ktf, ktes1, ktes2, i_start, i_end, j_start, j_end
@@ -498,13 +496,6 @@ c----------------------------------------------------------------------
 !
       end if
 
-    END SUBROUTINE Epifanio
-
-!=======================================================================
-
-      subroutine slip_coeff(ucof,vcof,nx,ny)
-
-      include 'comblk.h'
 !       
 ! compute coefficients for tangential stress compuations at lower
 !   boundary.  Some notes:
@@ -515,16 +506,10 @@ c----------------------------------------------------------------------
 !   through one of:  a) periodicity; b) twod; or c) zero terrain at
 !   boundaries.  So we do not worry about outer values here.
 !
-      integer nx,ny
-      real ucof(nx,ny,10),vcof(nx,ny,10)
-
-      integer i,j
-      real n1,n2,n3,gamm
-!
 ! u pt coeffs first
 !
       do j=2,ny-2
-      do i=2,nx-1
+      do i=2,i_end-1
 
         gamm = dqdz(i,j,2)*sqrt( (dqdx_xy(i,j,2)*dzdq(i,j,2))**2
      >             + (dqdy_xy(i,j,2)*dzdq(i,j,2))**2 + 1. )
@@ -565,7 +550,7 @@ c----------------------------------------------------------------------
 ! now v pts
 !
       do j=2,ny-1
-      do i=2,nx-2
+      do i=2,i_end-2
 
         gamm = dqdz(i,j,3)*sqrt( (dqdx_xy(i,j,3)*dzdq(i,j,3))**2
      >             + (dqdy_xy(i,j,3)*dzdq(i,j,3))**2 + 1. )
@@ -603,36 +588,12 @@ c----------------------------------------------------------------------
       enddo
       enddo
 
-      return
-      end
-
 !-------------------------------------------------------------------------
-
-      subroutine slip_solve(us,vs,resu,resv,pcru,pcrv,lpu,lpv,lru,&
-                       lrv,dragx,dragy,ucof,vcof,u,v,w,u0,v0,km,&
-                       zbot,time,nx,ny,nz)
-
-      include 'comblk.h'
 !
 ! linear solver to obtain slip/drag condition at bottom boundary.
 !   Solves for us and vs as a function of the interior values of
 !   u and v plus any specified drag.
 !
-      integer nx,ny,nz
-      real us(nx,ny),vs(nx,ny),resu(nx,ny),resv(nx,ny)
-      real pcru(nx,ny),pcrv(nx,ny),lpu(nx,ny),lpv(nx,ny)
-      real lru(nx,ny),lrv(nx,ny),dragx(nx,ny),dragy(nx,ny)
-      real ucof(nx,ny,10),vcof(nx,ny,10)
-      real u(nx,ny,nz),v(nx,ny,nz),w(nx,ny,nz)
-      real u0(nx,ny,nz),v0(nx,ny,nz),km(nx,ny,nz)
-      real zbot(nx,ny,3),time
-
-      integer i,j,k,m,ii,im1,jj,jm1,istop,maxits,iperx,ipery
-      real eps,resmax,restol,beta,alpha,rhsmax
-      real gamm,n1,n2,n3,kmsrf,dudz,dvdz
-      double precision lplp,rlp,lplr
-      parameter (maxits=500,eps=5.e-5)
-
       iperx = 0
       if (perx) iperx = 1
       ipery = 0
@@ -643,7 +604,7 @@ c----------------------------------------------------------------------
 !   shear.  Then we add in any specified surface drag on top of that.
 !
       do j=1,ny-1
-      do i=1,nx
+      do i=1,i_end
         gamm = dqdz(i,j,2)*sqrt( (dqdx_xy(i,j,2)*dzdq(i,j,2))**2
      >             + (dqdy_xy(i,j,2)*dzdq(i,j,2))**2 + 1. )
         n1 = dqdx_xy(i,j,2)*dqdx_zw(1)/gamm
@@ -664,7 +625,7 @@ c----------------------------------------------------------------------
       do j=1,ny
         jj = min0(j,ny-1)
         jm1 = max0(j-1,1)
-      do i=1,nx-1
+      do i=1,i_end-1
         gamm = dqdz(i,j,3)*sqrt( (dqdx_xy(i,j,3)*dzdq(i,j,3))**2
      >             + (dqdy_xy(i,j,3)*dzdq(i,j,3))**2 + 1. )
         n1 = dqdx_xy(i,j,3)*dqdx_zw(1)/gamm
@@ -683,14 +644,15 @@ c----------------------------------------------------------------------
       enddo
       enddo
 
-      if (drag_opt.gt.2)
-     >     call surf_drag(dragx,dragy,u,v,w,zbot,time,nx,ny,nz)
+      if (drag_opt.gt.2) THEN
+          call surf_drag(dragx,dragy,u,v,w,zbot,time,i_end,ny,nz)
+      endif
 !
 ! set initial guess for us and vs by neglecting the terrain
 !
       do j=1,ny-1
-      do i=1,nx
-        ii = min0(i,nx-1)
+      do i=1,i_end
+        ii = min0(i,i_end-1)
         im1 = max0(i-1,1)
         kmsrf = 0.5*(km(ii,j,1)+km(im1,j,1))
         dudz = -dragx(i,j)/kmsrf
@@ -698,7 +660,7 @@ c----------------------------------------------------------------------
       enddo
       enddo
       do j=1,ny
-      do i=1,nx-1
+      do i=1,i_end-1
         jj = min0(j,ny-1)
         jm1 = max0(j-1,1)
         kmsrf = 0.5*(km(i,jj,1)+km(i,jm1,1))
@@ -712,7 +674,7 @@ c----------------------------------------------------------------------
       rhsmax = 0.
 
       do j=2,ny-2
-      do i=2,nx-1
+      do i=2,i_end-1
 
         gamm = dqdz(i,j,2)*sqrt( (dqdx_xy(i,j,2)*dzdq(i,j,2))**2
      >             + (dqdy_xy(i,j,2)*dzdq(i,j,2))**2 + 1. )
@@ -732,7 +694,7 @@ c----------------------------------------------------------------------
       enddo
 
       do j=2,ny-1
-      do i=2,nx-2
+      do i=2,i_end-2
 
         gamm = dqdz(i,j,3)*sqrt( (dqdx_xy(i,j,3)*dzdq(i,j,3))**2
      >             + (dqdy_xy(i,j,3)*dzdq(i,j,3))**2 + 1. )
@@ -755,14 +717,14 @@ c----------------------------------------------------------------------
 !
 ! make sure initial us and vs satisfy bcs
 !
-      call set_bcs_slip(us,vs,u,v,km,dragx,dragy,nx,ny,nz,1)
+      call set_bcs_slip(us,vs,u,v,km,dragx,dragy,i_end,ny,nz,1)
 !
 ! compute initial residual, u pts and then v pts
 !
       resmax = 0.
 
       do j=2+ipery,ny-2-ipery
-      do i=2+2*iperx,nx-1-iperx
+      do i=2+2*iperx,i_end-1-iperx
         resu(i,j) = ucof(i,j,1)*us(i+1,j) + ucof(i,j,2)*us(i-1,j)
      >            + ucof(i,j,3)*us(i,j+1) + ucof(i,j,4)*us(i,j-1)
      >            + ucof(i,j,5)*us(i,j) + ucof(i,j,6)*vs(i,j)
@@ -773,7 +735,7 @@ c----------------------------------------------------------------------
       enddo
 
       do j=2+2*ipery,ny-1-ipery
-      do i=2+iperx,nx-2-iperx
+      do i=2+iperx,i_end-2-iperx
         resv(i,j) = vcof(i,j,1)*vs(i+1,j) + vcof(i,j,2)*vs(i-1,j)
      >            + vcof(i,j,3)*vs(i,j+1) + vcof(i,j,4)*vs(i,j-1)
      >            + vcof(i,j,5)*vs(i,j) + vcof(i,j,6)*us(i+1,j-1)
@@ -787,12 +749,12 @@ c----------------------------------------------------------------------
 !
 ! set bcs on initial residual
 !                                                                                                                                                          
-      call set_bcs_slip(resu,resv,u,v,km,dragx,dragy,nx,ny,nz,0)
+      call set_bcs_slip(resu,resv,u,v,km,dragx,dragy,i_end,ny,nz,0)
 !
 ! initialize lpu,lpv,pcru,pcrv
 !                                                                                                                                                          
       do j=2+ipery,ny-2-ipery
-      do i=2+2*iperx,nx-1-iperx
+      do i=2+2*iperx,i_end-1-iperx
         pcru(i,j) = resu(i,j)
         lpu(i,j) =
      >      ucof(i,j,1)*resu(i+1,j) + ucof(i,j,2)*resu(i-1,j)
@@ -804,7 +766,7 @@ c----------------------------------------------------------------------
       enddo
 
       do j=2+2*ipery,ny-1-ipery
-      do i=2+iperx,nx-2-iperx
+      do i=2+iperx,i_end-2-iperx
         pcrv(i,j) = resv(i,j)
         lpv(i,j) =
      >      vcof(i,j,1)*resv(i+1,j) + vcof(i,j,2)*resv(i-1,j)
@@ -828,14 +790,14 @@ c----------------------------------------------------------------------
         lplp = 0.
 
         do j=2+ipery,ny-2-ipery
-        do i=2+2*iperx,nx-1-iperx
+        do i=2+2*iperx,i_end-1-iperx
           rlp = rlp + resu(i,j)*lpu(i,j)
           lplp = lplp + lpu(i,j)*lpu(i,j)
         enddo
         enddo
 
         do j=2+2*ipery,ny-1-ipery
-        do i=2+iperx,nx-2-iperx
+        do i=2+iperx,i_end-2-iperx
           rlp = rlp + resv(i,j)*lpv(i,j)
           lplp = lplp + lpv(i,j)*lpv(i,j)
         enddo
@@ -848,7 +810,7 @@ c----------------------------------------------------------------------
         resmax = 0.
 
         do j=2+ipery,ny-2-ipery
-        do i=2+2*iperx,nx-1-iperx
+        do i=2+2*iperx,i_end-1-iperx
           us(i,j) = us(i,j) + beta*pcru(i,j)
           resu(i,j) = resu(i,j) + beta*lpu(i,j)
           if (abs(resu(i,j)).gt.resmax) resmax = abs(resu(i,j))
@@ -856,7 +818,7 @@ c----------------------------------------------------------------------
         enddo
 
         do j=2+2*ipery,ny-1-ipery
-        do i=2+iperx,nx-2-iperx
+        do i=2+iperx,i_end-2-iperx
           vs(i,j) = vs(i,j) + beta*pcrv(i,j)
           resv(i,j) = resv(i,j) + beta*lpv(i,j)
           if (abs(resv(i,j)).gt.resmax) resmax = abs(resv(i,j))
@@ -865,7 +827,7 @@ c----------------------------------------------------------------------
 !
 ! set bcs on res
 !                                                                                                                                                          
-        call set_bcs_slip(resu,resv,u,v,km,dragx,dragy,nx,ny,nz,0)
+        call set_bcs_slip(resu,resv,u,v,km,dragx,dragy,i_end,ny,nz,0)
 !
 ! check for convergence and continue
 !                                                                                                                                                          
@@ -878,7 +840,7 @@ c----------------------------------------------------------------------
 ! compute lru,lrv
 !                                                                                                                                                          
           do j=2+ipery,ny-2-ipery
-          do i=2+2*iperx,nx-1-iperx
+          do i=2+2*iperx,i_end-1-iperx
             lru(i,j) =
      >        ucof(i,j,1)*resu(i+1,j) + ucof(i,j,2)*resu(i-1,j)
      >      + ucof(i,j,3)*resu(i,j+1) + ucof(i,j,4)*resu(i,j-1)
@@ -889,7 +851,7 @@ c----------------------------------------------------------------------
           enddo
 
           do j=2+2*ipery,ny-1-ipery
-          do i=2+iperx,nx-2-iperx
+          do i=2+iperx,i_end-2-iperx
             lrv(i,j) =
      >        vcof(i,j,1)*resv(i+1,j) + vcof(i,j,2)*resv(i-1,j)
      >      + vcof(i,j,3)*resv(i,j+1) + vcof(i,j,4)*resv(i,j-1)
@@ -904,13 +866,13 @@ c----------------------------------------------------------------------
           lplr = 0.
 
           do j=2+ipery,ny-2-ipery
-          do i=2+2*iperx,nx-1-iperx
+          do i=2+2*iperx,i_end-1-iperx
             lplr = lplr + lpu(i,j)*lru(i,j)
           enddo
           enddo
 
           do j=2+2*ipery,ny-1-ipery
-          do i=2+iperx,nx-2-iperx
+          do i=2+iperx,i_end-2-iperx
             lplr = lplr + lpv(i,j)*lrv(i,j)
           enddo
           enddo
@@ -920,14 +882,14 @@ c----------------------------------------------------------------------
 ! advance (pcru,pcrv) and (lpu,lpv)
 !
           do j=2+ipery,ny-2-ipery
-          do i=2+2*iperx,nx-1-iperx
+          do i=2+2*iperx,i_end-1-iperx
             pcru(i,j) = resu(i,j) + alpha*pcru(i,j)
             lpu(i,j) = lru(i,j) + alpha*lpu(i,j)
           enddo
           enddo
 
           do j=2+2*ipery,ny-1-ipery
-          do i=2+iperx,nx-2-iperx
+          do i=2+iperx,i_end-2-iperx
             pcrv(i,j) = resv(i,j) + alpha*pcrv(i,j)
             lpv(i,j) = lrv(i,j) + alpha*lpv(i,j)
           enddo
@@ -953,22 +915,21 @@ c----------------------------------------------------------------------
 !
 ! set bcs on us and vs and set w at surface
 !
-      call set_bcs_slip(us,vs,u,v,km,dragx,dragy,nx,ny,nz,1)
+      call set_bcs_slip(us,vs,u,v,km,dragx,dragy,i_start,j_start,i_end,j_end,nz,1)
 
-      do j=1,ny-1
-      do i=1,nx-1
+      do j=j_start,j_end-1
+      do i=i_start,i_end-1
         w(i,j,1) =
      >     0.5*(us(i,j)+us(i+1,j))*dqdx_xy(i,j,1)*dzdq(i,j,1)
      >   + 0.5*(vs(i,j)+vs(i,j+1))*dqdy_xy(i,j,1)*dzdq(i,j,1)
       enddo
       enddo
 
-      return
-      end
+END SUBROUTINE EPIFANIO
 
 !-----------------------------------------------------------------------      
 
-      subroutine set_bcs_slip(fus,fvs,u,v,km,dragx,dragy,nx,ny,nz,ius)
+      subroutine set_bcs_slip(fus,fvs,u,v,km,dragx,dragy,i_start,j_start,i_end,j_end,nz,ius)
 
 !      include 'comblk.h'
 ! 
@@ -978,17 +939,17 @@ c----------------------------------------------------------------------
 !   the corresponding residuals.  The bcs on the residuals are    
 !   homogenous versions of the bcs on us and vs.  
 !                                                                                                                                                          
-      integer nx,ny,nz,ius
-      real fus(nx,ny),fvs(nx,ny),u(nx,ny,nz),v(nx,ny,nz),km(nx,ny,nz)
-      real dragx(nx,ny),dragy(nx,ny)
+      integer :: nz,ius,i_start,j_start,i_end,j_end
+      real, dimension(i_start:i_end,j_start:j_end) :: fus,fvs,dragx,dragy
+      real, dimension(i_start:i_end,j_start:j_end,nz) :: u,v,km
 
       integer i,j
       real dudz,dvdz,kmsrf
 
       if (twod) then
-        do i=1,nx
-          fus(i,1) = fus(i,2)
-          fus(i,ny-1) = fus(i,ny-2)
+        do i=i_start,i_end
+          fus(i,j_start) = fus(i,j_start+1)
+          fus(i,j_end-1) = fus(i,j_end-2)
         enddo
         do i=1,nx-1
           fvs(i,1) = fvs(i,2)
@@ -1218,7 +1179,7 @@ c----------------------------------------------------------------------
       enddo
 
       return
-      end
+      end subroutine surf_drag
      
 !--------------------------------------------------------------------- 
 
@@ -1242,8 +1203,8 @@ c----------------------------------------------------------------------
         if (rad.le.sdlx) then
           drag_coeff = cdmax
         else if (rad.le.(sdlx+sdlx2)) then
-          drag_coeff = cdmin + 0.5*(cdmax-cdmin)
-     >                       * (1.+cos(pi*(rad-sdlx)/sdlx2))
+          drag_coeff = cdmin + 0.5*(cdmax-cdmin) &
+                             * (1.+cos(pi*(rad-sdlx)/sdlx2))
         else
           drag_coeff = cdmin
         end if
@@ -1254,8 +1215,8 @@ c----------------------------------------------------------------------
         if (rad.le.sdlx) then
           srgh = cdmax
         else if (rad.le.(sdlx+sdlx2)) then
-          srgh = cdmin + 0.5*(cdmax-cdmin)
-     >                       * (1.+cos(pi*(rad-sdlx)/sdlx2))
+          srgh = cdmin + 0.5*(cdmax-cdmin) &
+                             * (1.+cos(pi*(rad-sdlx)/sdlx2))
         else
           srgh = cdmin
         end if
@@ -1298,7 +1259,7 @@ c----------------------------------------------------------------------
 !=======================================================================
 !=======================================================================
 
-    END MODULE module_3Dsfcflux
+    END MODULE module_sf_3Dflux
 
 !=======================================================================
 !=======================================================================
