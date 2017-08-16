@@ -266,12 +266,15 @@ contains
    real, dimension(its:ite,kts:kte+1)   :: zq
    real                 :: tauwavex0,tauwavey0,XNBV,density,tvcon,hpbl2
    integer              :: kpbl2,kvar
-   real, parameter      :: varmax = 40.
+   real, parameter      :: varmax = 50.
 !
    integer              ::  kpbl(ims:ime)
    real                 ::  var(ims:ime),oc1(ims:ime),                         &
                             dusfc(ims:ime),dvsfc(ims:ime)
 !
+! added Beljaars orographic form drag
+   real, dimension(its:ite,kts:kte)     :: utendform,vtendform
+   real                 :: a1,a2,wsp
 ! critical richardson number for wave breaking : ! larger drag with larger value
 !
    real,parameter       ::  ric     = 0.25  
@@ -645,6 +648,8 @@ ENDIF   !gwd_opt <= 2
   density=1.2
   utendwave=0.
   vtendwave=0.
+  utendform=0.
+  vtendform=0.
   zq=0.
 !
   IF (gwd_opt > 1) THEN
@@ -696,7 +701,7 @@ ENDIF   !gwd_opt <= 2
           ENDIF
        enddo
        !kpbl2 = MAX(MIN(kpbl(i),8),kts+1)
-       if((xland1(i)-1.5).le.0 .and. 2.*var(i).le.hpbl(i))then
+       if((xland1(i)-1.5).le.0. .and. 2.*var(i).le.hpbl(i))then
           if(br1(i).gt.0. .and. thvx(i,kpbl2)-thvx(i,kts) > 0.)then
             cleff    = sqrt(dxy(i)**2 + dxyp(i)**2)
 !            cleff    = 3. * max(dxmeter,cleff)
@@ -740,9 +745,31 @@ ENDIF   !gwd_opt <= 2
             enddo
           endif
        endif
-    enddo
+    enddo ! end i loop
 
-  ENDIF
+   !add Beljaars et al. (2004, QJRMS, equ. 16) form drag:
+    do i=its,ite
+       IF ((xland1(i)-1.5) .le. 0.) then
+          !(IH*kflt**n1)**-1 = (0.00102*0.00035**-1.9)**-1 = 0.00026615161
+!orig:    a1=0.00026615161*var(i)**2
+          a1=0.00026615161*MIN(var(i),varmax)**2
+          ! k1**(n1-n2) = 0.003**(-1.9 - -2.8) = 0.003**0.9 = 0.005363
+          a2=a1*0.005363
+          DO k=kts,kte
+             wsp=SQRT(u1(i,k)**2 + v1(i,k)**2)
+             ! alpha*beta*Cmd*Ccorr*2.109 = 12.*1.*0.005*0.6*2.109 = 0.0759 
+              utendform(i,k)=-0.0759*wsp*u1(i,k)* &
+                           EXP(-(za(i,k)/1500.)**1.5)*a2*za(i,k)**(-1.2)* &
+                           (1. - 1000./MAX(dxmeter,1000.))
+              vtendform(i,k)=-0.0759*wsp*v1(i,k)* &
+                           EXP(-(za(i,k)/1500.)**1.5)*a2*za(i,k)**(-1.2)* &
+                           (1. - 1000./MAX(dxmeter,1000.))
+              IF(za(i,k) > 4000.) exit
+          ENDDO
+       ENDIF
+    ENDDO
+
+  ENDIF  ! end if gwd_opt > 1
 
 IF (gwd_opt .LE. 2) THEN
 !                                                                       
@@ -894,8 +921,8 @@ IF (gwd_opt .LE. 2) THEN
          dtauy = taud(i,k) * yn(i)
          dtaux2d(i,k) = dtaux
          dtauy2d(i,k) = dtauy
-         dudt(i,k)  = dtaux + dudt(i,k) + utendwave(i,k)
-         dvdt(i,k)  = dtauy + dvdt(i,k) + vtendwave(i,k)
+         dudt(i,k)  = dtaux + dudt(i,k) + utendwave(i,k) + utendform(i,k)
+         dvdt(i,k)  = dtauy + dvdt(i,k) + vtendwave(i,k) + vtendform(i,k)
          dusfc(i)   = dusfc(i) + dtaux * del(i,k)
          dvsfc(i)   = dvsfc(i) + dtauy * del(i,k)
        enddo                                                          
@@ -908,8 +935,8 @@ IF (gwd_opt .LE. 2) THEN
 ELSE
      do k = kts,kte
        do i = its,ite
-         dudt(i,k)  = dudt(i,k) + utendwave(i,k)
-         dvdt(i,k)  = dvdt(i,k) + vtendwave(i,k)
+         dudt(i,k)  = dudt(i,k) + utendwave(i,k) + utendform(i,k)
+         dvdt(i,k)  = dvdt(i,k) + vtendwave(i,k) + vtendform(i,k)
        enddo
      enddo
 ENDIF                                                             
