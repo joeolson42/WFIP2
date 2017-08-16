@@ -4542,7 +4542,7 @@ ENDIF
 
      REAL,DIMENSION(KTS:KTE), INTENT(INOUT) :: qc_bl1d,cldfra_bl1d
 
-    INTEGER, PARAMETER :: NUP=10, debug_mf=1
+    INTEGER, PARAMETER :: NUP=10, debug_mf=0
   ! local variables
   ! updraft properties
      REAL,DIMENSION(KTS:KTE+1,1:NUP) :: UPW,UPTHL,UPQT,UPQC,UPQV,  &
