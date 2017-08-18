@@ -469,6 +469,18 @@
          CALL wrf_debug(100, mp_debug)
          write(mp_debug,*) '   column sum at point (i,j) = ', its,jts, SUM(nwfa(its,:,jts))
          CALL wrf_debug(100, mp_debug)
+         do j = jts, min(jde-1,jte)
+         do i = its, min(ide-1,ite)
+         do k = kts, kte
+            if (nwfa(i,k,j) .LT. 0.) then !Jaymes
+              write(mp_debug,*) 'Found negative QNWFA...replacing with non-negative values. Check met_em files.'
+              CALL wrf_debug(0, mp_debug)
+              nwfa(i,k,j) = max( nwfa(i,max(k-1,kts),j) , nwfa(i,min(k+1,kte),j) )
+              nwfa(i,k,j) = max( 0., nwfa(i,k,j) ) 
+            endif
+         enddo
+         enddo
+         enddo
       endif
 
 
@@ -505,6 +517,18 @@
          CALL wrf_debug(100, mp_debug)
          write(mp_debug,*) '   column sum at point (i,j) = ', its,jts, SUM(nifa(its,:,jts))
          CALL wrf_debug(100, mp_debug)
+         do j = jts, min(jde-1,jte)
+         do i = its, min(ide-1,ite)
+         do k = kts, kte
+            if (nifa(i,k,j) .LT. 0.) then !Jaymes
+              write(mp_debug,*) 'Found negative QNIFA...replacing with non-negative values. Check met_em files.'
+              CALL wrf_debug(0, mp_debug)
+              nifa(i,k,j) = max( nifa(i,max(k-1,kts),j) , nifa(i,min(k+1,kte),j) )
+              nifa(i,k,j) = max( 0., nifa(i,k,j) ) 
+            endif
+         enddo
+         enddo
+         enddo
       endif
 
 !..Capture initial state lowest level CCN aerosol data in 2D array.

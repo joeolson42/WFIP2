@@ -29,8 +29,8 @@ MODULE module_sf_mynn
 !   WATER only:
 !1) isftcflx option is now available with the following options:
 !   (default) =0: z0, zt, and zq from the COARE algorithm. Set COARE_OPT (below) to
-!                 3.0 (Fairall et al. 2003)
-!                 3.5 (Edson et al 2013; default) 
+!                 3.0 (Fairall et al. 2003, default)
+!                 3.5 (Edson et al 2013) 
 !             =1: z0 from Davis et al (2008), zt & zq from COARE 3.0/3.5
 !             =2: z0 from Davis et al (2008), zt & zq from Garratt (1992)
 !             =3: z0 from Taylor and Yelland (2004), zt and zq from COARE 3.0/3.5
@@ -67,7 +67,7 @@ MODULE module_sf_mynn
   REAL, PARAMETER :: wmin=0.1    ! Minimum wind speed
   REAL, PARAMETER :: VCONVC=1.25
   REAL, PARAMETER :: SNOWZ0=0.011
-  REAL, PARAMETER :: COARE_OPT=3.5  ! 3.0 or 3.5
+  REAL, PARAMETER :: COARE_OPT=3.0  ! 3.0 or 3.5
 
   REAL, DIMENSION(0:1000 ),SAVE          :: PSIMTB,PSIHTB
 
@@ -1090,8 +1090,11 @@ CONTAINS
          endif
       elseif(ZA(i) .gt. 7.0 .and. ZA(i) .lt. 13.0) then
          !moderate vertical resolution
-         U10(I)=U1D(I)*PSIX10/PSIX
-         V10(I)=V1D(I)*PSIX10/PSIX
+         !U10(I)=U1D(I)*PSIX10/PSIX
+         !V10(I)=V1D(I)*PSIX10/PSIX
+         !use neutral-log:
+         U10(I)=U1D(I)*log(10./ZNTstoch(I))/log(ZA(I)/ZNTstoch(I))
+         V10(I)=V1D(I)*log(10./ZNTstoch(I))/log(ZA(I)/ZNTstoch(I))
       else
          ! very coarse vertical resolution
          U10(I)=U1D(I)*PSIX10/PSIX

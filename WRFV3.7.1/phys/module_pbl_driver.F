@@ -5,7 +5,7 @@ MODULE module_pbl_driver
 CONTAINS
 
 !------------------------------------------------------------------
-   SUBROUTINE pbl_driver(                                          &
+   SUBROUTINE pbl_driver(spp_pbl,pattern_spp_pbl,                 &                                          
                   itimestep,dt,u_frame,v_frame                     &
                  ,bldt,curr_secs,adapt_step_flag                   &
                  ,bldtacttime                                      & 
@@ -41,19 +41,18 @@ CONTAINS
               ! MYNN
                  ,qke,Sh3d                                         &
                  ,qke_adv,bl_mynn_tkeadvect                        & !ACF for QKE advection
-                 ,tsq,qsq,cov,rmol,ch,qcg,grav_settling            &
-                 ,dqke,qWT,qSHEAR,qBUOY,qDISS,bl_mynn_tkebudget    &
-                 ,bl_mynn_cloudpdf                                 &
-                 ,bl_mynn_mixlength                                &
-                 ,icloud_bl,qc_bl,cldfra_bl                        &
-                 ,bl_mynn_edmf,bl_mynn_edmf_mom,bl_mynn_edmf_tke   &
-                 ,bl_mynn_edmf_part                                &
-                 ,bl_mynn_cloudmix,bl_mynn_mixqt                   &
-                 ,edmf_a,edmf_w,edmf_thl                           &
-                 ,edmf_qt,edmf_ent,edmf_qc                         &
-                 ,vdfg                                             &
+                 ,tsq,qsq,cov,rmol,ch,qcg,grav_settling            & 
+                 ,dqke,qWT,qSHEAR,qBUOY,qDISS,bl_mynn_tkebudget    & ! JOE - MYNN TKE budget
+                 ,bl_mynn_cloudpdf                                 & ! JOE - cloud PDF tests
+                 ,bl_mynn_mixlength                                & ! JAYMES
+                 ,icloud_bl,qc_bl,cldfra_bl                        & ! JOE-subgrid bl clouds
+                 ,bl_mynn_edmf,bl_mynn_edmf_mom,bl_mynn_edmf_tke   & !JOE- MYNN edmf
+                 ,bl_mynn_edmf_part                                & !JOE- MYNN edmf
+                 ,bl_mynn_cloudmix,bl_mynn_mixqt                   & !JOE- MYNN cloud methods
+                 ,edmf_a,edmf_w,edmf_thl                           & !JOE- MYNN edmf
+                 ,edmf_qt,edmf_ent,edmf_qc                         & !JOE- MYNN edmf
+                 ,vdfg                                             & ! Katata- fog deposition
                  ,nupdraft,maxMF,ktop_shallow                      &
-                 ,spp_pbl,pattern_spp_pbl                          &
 #if (NMM_CORE==1)
                  ,DISHEAT                                          &
                  ,HPBL2D, EVAP2D, HEAT2D, RC2D                     &   !Kwon FOR SHAL. CON.
@@ -569,13 +568,12 @@ CONTAINS
 !
 
    INTEGER,    DIMENSION( ims:ime , jms:jme ),                    &
-               INTENT(INOUT) ::             KPBL
+               INTENT(INOUT) ::                             KPBL
 
    REAL,       DIMENSION( ims:ime , jms:jme ),                    &
                INTENT(IN)    :: XICE, SNOW, LH
 
-   ! Stochastic parameter perturbations
-   INTEGER,    INTENT(IN)              ::             spp_pbl
+! Random perturbations
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT),OPTIONAL ::pattern_spp_pbl
 
 ! Bep changes: variable added for urban
@@ -658,6 +656,7 @@ CONTAINS
                INTENT(IN)    ::                           mut
 !
    INTEGER,    OPTIONAL, INTENT(IN)    ::               gwd_opt
+   INTEGER,    INTENT(IN)              ::             spp_pbl
    REAL,       OPTIONAL, INTENT(IN)    ::               p_top
 !
   real,   dimension( ims:ime, kms:kme, jms:jme )                             , &
@@ -1571,7 +1570,8 @@ CONTAINS
            IF ( PRESENT( qv_curr )  .AND. PRESENT( qc_curr )  .AND. &
                 PRESENT( rqvblten ) .AND. PRESENT( rqcblten ) .AND. &
                 PRESENT( qi_curr ) .AND. PRESENT( rqiblten ) .AND.  &
-                PRESENT( rqniblten ) .AND. PRESENT( qni_curr ) .AND.&
+                PRESENT( rqniblten ) .AND.                          &
+                PRESENT( qni_curr ) .AND. PRESENT( qnc_curr ) .AND. &
                 PRESENT(qke) .AND. PRESENT(tsq) .AND.               &
                 PRESENT(qsq) .AND. PRESENT(cov) .AND.               &
                 PRESENT(rmol) .AND.                                 &
@@ -1591,8 +1591,9 @@ CONTAINS
                  initflag=0
               ENDIF
               
-              CALL  mynn_bl_driver(                                      &
-                   &initflag=initflag,grav_settling=grav_settling,       &
+              CALL  mynn_bl_driver(             &
+                   &initflag=initflag,&
+                   &grav_settling=grav_settling,&
                    &delt=dtbl,dz=dz8w,dx=dx,znt=znt,                     &
                    &u=u_phy,v=v_phy,w=w,th=th_phy,qv=qv_curr,qc=qc_curr, &
                    &qi=qi_curr,qni=qni_curr,qnc=qnc_curr,                &
@@ -1616,24 +1617,24 @@ CONTAINS
                    &pblh=pblh,KPBL=KPBL&
                    &,el_pbl=el_pbl                                       &
                    &,dqke=dqke                                           &
-                   &,qWT=qWT,qSHEAR=qSHEAR,qBUOY=qBUOY,qDISS=qDISS       & ! for grims shallow-cu
+                   &,qWT=qWT,qSHEAR=qSHEAR,qBUOY=qBUOY,qDISS=qDISS       &
+! for grims shallow convection                                            
                    &,WSTAR=wstar,DELTA=delta                             &
                    &,bl_mynn_tkebudget=bl_mynn_tkebudget                 &
                    &,bl_mynn_cloudpdf=bl_mynn_cloudpdf                   &
                    &,bl_mynn_mixlength=bl_mynn_mixlength                 &
-                   &,icloud_bl=icloud_bl,qc_bl=qc_bl                     &
-                   &,cldfra_bl=cldfra_bl                                 &
-                   &,bl_mynn_edmf=bl_mynn_edmf                           &
-                   &,bl_mynn_edmf_mom=bl_mynn_edmf_mom                   &
-                   &,bl_mynn_edmf_tke=bl_mynn_edmf_tke                   &
-                   &,bl_mynn_edmf_part=bl_mynn_edmf_part                 &
-                   &,bl_mynn_cloudmix=bl_mynn_cloudmix                   &
-                   &,bl_mynn_mixqt=bl_mynn_mixqt                         &
-                   &,edmf_a=edmf_a,edmf_w=edmf_w,edmf_qt=edmf_qt         &
-                   &,edmf_thl=edmf_thl,edmf_ent=edmf_ent,edmf_qc=edmf_qc &
-                   &,nupdraft=nupdraft,maxMF=maxMF                       &
-                   &,ktop_shallow=ktop_shallow                           &
-                   &,spp_pbl=spp_pbl,pattern_spp_pbl=pattern_spp_pbl     &
+                   &,icloud_bl=icloud_bl,qc_bl=qc_bl                     & !JOE-subgrid bl clouds
+                   &,cldfra_bl=cldfra_bl                                 & !JOE-subgrid bl clouds
+                   &,bl_mynn_edmf=bl_mynn_edmf                           & !JOE- edmf
+                   &,bl_mynn_edmf_mom=bl_mynn_edmf_mom                   & !JOE- edmf
+                   &,bl_mynn_edmf_tke=bl_mynn_edmf_tke                   & !JOE- edmf
+                   &,bl_mynn_edmf_part=bl_mynn_edmf_part                 & !JOE- edmf
+                   &,bl_mynn_cloudmix=bl_mynn_cloudmix                   & !JOE- cloud methods
+                   &,bl_mynn_mixqt=bl_mynn_mixqt                         & !JOE- moist tendencies
+                   &,edmf_a=edmf_a,edmf_w=edmf_w,edmf_qt=edmf_qt         & !JOE- edmf
+                   &,edmf_thl=edmf_thl,edmf_ent=edmf_ent,edmf_qc=edmf_qc & !JOE- edmf
+                   &,nupdraft=nupdraft,maxMF=maxmf,ktop_shallow=ktop_shallow      &
+                   &,spp_pbl=spp_pbl,pattern_spp_pbl=pattern_spp_pbl     & 
                    &,FLAG_QI=flag_qi,FLAG_QNI=flag_qni                   &
                    &,FLAG_QC=flag_qc,FLAG_QNC=flag_qnc                   &
                    ,IDS=ids,IDE=ide,JDS=jds,JDE=jde,KDS=kds,KDE=kde      &
@@ -1646,6 +1647,7 @@ CONTAINS
                  'qv_curr, '//                                      &
                  'qc_curr, '//                                      &
                  'qi_curr, '//                                      &
+!                 'qnc_curr, '//                                     &
                  'qni_curr, '//                                     &
                  'rqvblten, '//                                     &
                  'rqcblten, '//                                     &
@@ -1666,6 +1668,7 @@ CONTAINS
                   PRESENT( qv_curr ) ,                              &
                   PRESENT( qc_curr ) ,                              &
                   PRESENT( qi_curr ) ,                              &
+!                  PRESENT( qnc_curr ) ,                             &
                   PRESENT( qni_curr ) ,                             &
                   PRESENT( rqvblten ) ,                             &
                   PRESENT( rqcblten ) ,                             &
@@ -2060,20 +2063,20 @@ CONTAINS
    
    IF (PRESENT(dtaux3d)) THEN
        IF(gwd_opt .EQ. 1)THEN
-             CALL gwdo(                                              &
-               U3D=u_phytmp,V3D=v_phytmp,T3D=t_phy      &
-              ,QV3D=qv_curr                                         &
-              ,P3D=p_phy,P3DI=p8w,PI3D=pi_phy,Z=z                        &
+             CALL gwdo(                                             &
+               U3D=u_phytmp,V3D=v_phytmp,T3D=t_phy,QV3D=qv_curr     &
+              ,P3D=p_phy,P3DI=p8w,PI3D=pi_phy,Z=z                   &
               ,RUBLTEN=rublten,RVBLTEN=rvblten                      &
               ,DTAUX3D=dtaux3d,DTAUY3D=dtauy3d                      &
-              ,DUSFCG=dusfcg,DVSFCG=dvsfcg &
+              ,DUSFCG=dusfcg,DVSFCG=dvsfcg,XLAND=xland,BR=br        &
               ,VAR2D=var2d,OC12D=oc12d     &
               ,OA2D1=oa1,OA2D2=oa2,OA2D3=oa3,OA2D4=oa4  &
               ,OL2D1=ol1,OL2D2=ol2,OL2D3=ol3,OL2D4=ol4  &
-              ,ZNU=znu,ZNW=znw,MUT=mut,P_TOP=p_top                  &
+              ,ZNU=znu,ZNW=znw,P_TOP=p_top,DZ=dz8w,PBLH=pblh        &
               ,CP=cp,G=g,RD=r_d                           &
-              ,RV=r_v,EP1=ep_1,PI=3.141592653                        &
-              ,DT=dtbl,DX=dx,KPBL2D=kpbl,ITIMESTEP=itimestep      &
+              ,RV=r_v,EP1=ep_1,PI=3.141592653                       &
+              ,DT=dtbl,DX=dx,KPBL2D=kpbl,ITIMESTEP=itimestep        &
+              ,gwd_opt=gwd_opt                                      &
               ,IDS=ids,IDE=ide,JDS=jds,JDE=jde,KDS=kds,KDE=kde      &
               ,IMS=ims,IME=ime,JMS=jms,JME=jme,KMS=kms,KME=kme      &
               ,ITS=its,ITE=ite,JTS=jts,JTE=jte,KTS=kts,KTE=kte      )

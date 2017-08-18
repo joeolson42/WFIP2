@@ -11103,6 +11103,9 @@ CONTAINS
             swddni(i,j)    = 0.  ! jararias 2013/08/10
             swddif(i,j)    = 0.  ! jararias 2013/08/10
             swcf(i,j)      = 0.
+            swddirc(i,j)   = 0.
+            swddnic(i,j)   = 0.
+            swddifc(i,j)   = 0.
 
       endif
 !

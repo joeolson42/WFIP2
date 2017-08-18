@@ -8,11 +8,11 @@ contains
 !-------------------------------------------------------------------------------
    subroutine gwdo(u3d,v3d,t3d,qv3d,p3d,p3di,pi3d,z,                           &
                   rublten,rvblten,                                             &
-                  dtaux3d,dtauy3d,dusfcg,dvsfcg,                               &
+                  dtaux3d,dtauy3d,dusfcg,dvsfcg,xland,br,                      &
                   var2d,oc12d,oa2d1,oa2d2,oa2d3,oa2d4,ol2d1,ol2d2,ol2d3,ol2d4, &
-                  znu,znw,mut,p_top,                                           &
+                  znu,znw,p_top,dz,pblh,                                   &
                   cp,g,rd,rv,ep1,pi,                                           &
-                  dt,dx,kpbl2d,itimestep,                                      &
+                  dt,dx,kpbl2d,itimestep,gwd_opt,                              &
                   ids,ide, jds,jde, kds,kde,                                   &
                   ims,ime, jms,jme, kms,kme,                                   &
                   its,ite, jts,jte, kts,kte)
@@ -37,6 +37,10 @@ contains
 !-- rv          gas constant for water vapor (j/kg/k)
 !-- dt          time step (s)
 !-- dx          model grid interval (m)
+!-- dz          height of model layers (m)
+!-- xland       land mask (1 for land, 2 for water)
+!-- br          bulk richardson number in surface layer
+!-- pblh        planetary boundary layer height (m)
 !-- ep1         constant for virtual temperature (r_v/r_d - 1) (dimensionless)
 !-- ids         start index for i in domain
 !-- ide         end index for i in domain
@@ -61,7 +65,7 @@ contains
   integer,  intent(in   )   ::      ids,ide, jds,jde, kds,kde,                 &
                                      ims,ime, jms,jme, kms,kme,                &
                                      its,ite, jts,jte, kts,kte
-  integer,  intent(in   )   ::      itimestep
+  integer,  intent(in   )   ::      itimestep,gwd_opt
 !
   real,     intent(in   )   ::      dt,dx,cp,g,rd,rv,ep1,pi
 !
@@ -70,7 +74,8 @@ contains
                                                                           p3d, &
                                                                          pi3d, &
                                                                           t3d, &
-                                                                             z
+                                                                            z, &
+                                                                           dz
   real,     dimension( ims:ime, kms:kme, jms:jme )                           , &
             intent(in   )   ::                                           p3di
 !
@@ -87,6 +92,12 @@ contains
 !
   integer,   dimension( ims:ime, jms:jme )                                   , &
              intent(in  )   ::                                         kpbl2d
+
+  real,   dimension( ims:ime, jms:jme )                                      , &
+             intent(in  )   ::                                           pblh, & 
+                                                                           br, &
+                                                                        xland
+
   real,   dimension( ims:ime, jms:jme )                                      , &
              intent(inout  )   ::                                      dusfcg, &
                                                                        dvsfcg
@@ -96,9 +107,6 @@ contains
                                                                         oc12d, &
                                                       oa2d1,oa2d2,oa2d3,oa2d4, &
                                                       ol2d1,ol2d2,ol2d3,ol2d4
-  real,     dimension( ims:ime, jms:jme )                                    , &
-            optional                                                         , &
-            intent(in  )   ::                                             mut
 !
   real,     dimension( kms:kme )                                             , &
             optional                                                         , &
@@ -121,22 +129,12 @@ contains
    enddo
 !
    do j = jts,jte
-      if(present(mut))then
-! For ARW we will replace p and p8w with dry hydrostatic pressure
-        do k = kts,kte+1
-          do i = its,ite
-             if(k.le.kte)pdh(i,k) = mut(i,j)*znu(k) + p_top
-             pdhi(i,k) = mut(i,j)*znw(k) + p_top
-          enddo
-        enddo
-      else
-        do k = kts,kte+1
-          do i = its,ite
-             if(k.le.kte)pdh(i,k) = p3d(i,k,j)
+      do k = kts,kte+1
+         do i = its,ite
+            if(k.le.kte)pdh(i,k) = p3d(i,k,j)
              pdhi(i,k) = p3di(i,k,j)
-          enddo
-        enddo
-      endif
+         enddo
+      enddo
 !
       do k = kts,kte
         do i = its,ite
@@ -161,6 +159,8 @@ contains
               ,prsi=pdhi(its,kts)                                              &
               ,prsl=pdh(its,kts),prslk=pi3d(ims,kms,j)                         &
               ,zl=z(ims,kms,j),rcl=1.0                                         &
+              ,xland1=xland(ims,j),br1=br(ims,j),hpbl=pblh(ims,j)              &
+              ,dz2=dz(ims,kms,j)                                               &
               ,kpblmax=kpblmax                                                 &
               ,dusfc=dusfcg(ims,j),dvsfc=dvsfcg(ims,j)                         &
               ,var=var2d(ims,j),oc1=oc12d(ims,j)                               &
@@ -168,6 +168,7 @@ contains
               ,g=g,cp=cp,rd=rd,rv=rv,fv=ep1,pi=pi                              &
               ,dxmeter=dx,deltim=dt                                            &
               ,kpbl=kpbl2d(ims,j),kdt=itimestep,lat=j                          &
+              ,gwd_opt=gwd_opt                                                 &
               ,ids=ids,ide=ide, jds=jds,jde=jde, kds=kds,kde=kde               &
               ,ims=ims,ime=ime, jms=jms,jme=jme, kms=kms,kme=kme               &
               ,its=its,ite=ite, jts=jts,jte=jte, kts=kts,kte=kte   )
@@ -180,9 +181,12 @@ contains
    subroutine gwdo2d(dudt,dvdt,dtaux2d,dtauy2d,                                &
                     u1,v1,t1,q1,                                               &
                     del,                                                       &
-                    prsi,prsl,prslk,zl,rcl,kpblmax,                            &
+                    prsi,prsl,prslk,zl,rcl,                                    &
+                    xland1,br1,hpbl,dz2,                                       &
+                    kpblmax,                                                   &
                     var,oc1,oa4,ol4,dusfc,dvsfc,                               &
                     g,cp,rd,rv,fv,pi,dxmeter,deltim,kpbl,kdt,lat,              &
+                    gwd_opt,                                                   &
                     ids,ide, jds,jde, kds,kde,                                 &
                     ims,ime, jms,jme, kms,kme,                                 &
                     its,ite, jts,jte, kts,kte)
@@ -204,6 +208,8 @@ contains
 !  program history log:
 !    2014-10-01  Hyun-Joo Choi (from KIAPS)  flow-blocking drag of kim and doyle
 !                              with blocked height by dividing streamline theory
+!    2017-04-06  Joseph Olson (from Gert-Jan Steeneveld) added small-scale
+!                    orographic grabity wave drag (gwd_opt = 2 or 3).
 !
 !  references:
 !        hong et al. (2008), wea. and forecasting
@@ -211,6 +217,8 @@ contains
 !        kim and arakawa (1995), j. atmos. sci.
 !        alpet et al. (1988), NWP conference.
 !        hong (1999), NCEP office note 424.
+!        steenevled et al (2008), JAMC
+!        Tsiringakis et al. (2017), Q. J. R. Meteor. Soc.
 !
 !  notice : comparible or lower resolution orography files than model resolution
 !           are desirable in preprocess (wps) to prevent weakening of the drag
@@ -235,7 +243,7 @@ contains
 !-------------------------------------------------------------------------------
    implicit none
 !-------------------------------------------------------------------------------
-   integer              ::  kdt,lat,latd,lond,kpblmax,                         &
+   integer              ::  kdt,lat,latd,lond,kpblmax,gwd_opt,                 &
                             ids,ide, jds,jde, kds,kde,                         &
                             ims,ime, jms,jme, kms,kme,                         &
                             its,ite, jts,jte, kts,kte
@@ -250,10 +258,23 @@ contains
    real                 ::  prsi(its:ite,kts:kte+1),del(its:ite,kts:kte)
    real                 ::  oa4(its:ite,4),ol4(its:ite,4)
 !
+! added for small-scale orographic wave drag
+   real, dimension(its:ite,kts:kte)     :: utendwave,vtendwave,thx,thvx,za
+   real, dimension(ims:ime), intent(in) :: br1,hpbl,xland1
+   real, dimension(its:ite)             :: govrth
+   real, dimension(ims:ime,kms:kme), intent(in) :: dz2
+   real, dimension(its:ite,kts:kte+1)   :: zq
+   real                 :: tauwavex0,tauwavey0,XNBV,density,tvcon,hpbl2
+   integer              :: kpbl2,kvar
+   real, parameter      :: varmax = 50.
+!
    integer              ::  kpbl(ims:ime)
    real                 ::  var(ims:ime),oc1(ims:ime),                         &
                             dusfc(ims:ime),dvsfc(ims:ime)
 !
+! added Beljaars orographic form drag
+   real, dimension(its:ite,kts:kte)     :: utendform,vtendform
+   real                 :: a1,a2,wsp
 ! critical richardson number for wave breaking : ! larger drag with larger value
 !
    real,parameter       ::  ric     = 0.25  
@@ -484,6 +505,10 @@ contains
      dxy(i)  = dxy4(MOD(nwd-1,4)+1)
      dxyp(i) = dxy4p(MOD(nwd-1,4)+1)
    enddo
+!
+! END INITIALIZATION; BEGIN GWD CALCULATIONS:
+!
+IF (gwd_opt .LE. 2) THEN   !============================================
 !                                                                       
 !---  saving richardson number in usqj for migwdi                       
 !
@@ -611,7 +636,142 @@ contains
        xn(i)   = 0.0                                             
        yn(i)   = 0.0                                             
      endif                                                         
-   enddo                                                             
+   enddo
+
+ENDIF   !gwd_opt <= 2
+!
+! add small-scale wavedrag for stable boundary layer
+!
+  XNBV=0.
+  tauwavex0=0.
+  tauwavey0=0.
+  density=1.2
+  utendwave=0.
+  vtendwave=0.
+  utendform=0.
+  vtendform=0.
+  zq=0.
+!
+  IF (gwd_opt > 1) THEN
+!
+! declaring potential temperature
+!
+    do k = kts,kte
+      do i = its,ite
+        thx(i,k) = t1(i,k)/prslk(i,k)
+      enddo
+    enddo
+!
+    do k = kts,kte
+      do i = its,ite
+        tvcon = (1.+fv*q1(i,k))
+        thvx(i,k) = thx(i,k)*tvcon
+      enddo
+    enddo
+!
+! Defining layer height
+!
+    do k = kts,kte
+      do i = its,ite
+        zq(i,k+1) = dz2(i,k)+zq(i,k)
+      enddo
+    enddo
+!
+    do k = kts,kte
+      do i = its,ite
+        za(i,k) = 0.5*(zq(i,k)+zq(i,k+1))
+      enddo
+    enddo
+
+    do i=its,ite
+       hpbl2 = hpbl(i)+10.
+       kpbl2 = kpbl(i)
+       !kvar = MIN(kpbl, k-level of var)
+       kvar = 1
+       do k=kts+1,MAX(kpbl(i),kts+1)
+!          IF (za(i,k)>2.*var(i) .or. za(i,k)>2*varmax) then
+          IF (za(i,k)>300.) then
+             kpbl2 = k
+             IF (k == kpbl(i)) then
+                hpbl2 = hpbl(i)+10.
+             ELSE
+                hpbl2 = za(i,k)+10.
+             ENDIF
+             exit
+          ENDIF
+       enddo
+       !kpbl2 = MAX(MIN(kpbl(i),8),kts+1)
+       if((xland1(i)-1.5).le.0. .and. 2.*var(i).le.hpbl(i))then
+          if(br1(i).gt.0. .and. thvx(i,kpbl2)-thvx(i,kts) > 0.)then
+            cleff    = sqrt(dxy(i)**2 + dxyp(i)**2)
+!            cleff    = 3. * max(dxmeter,cleff)
+            cleff    = 10. * max(12000.,cleff)
+            coefm(i) = (1. + ol(i)) ** (oa(i)+1.)
+            xlinv(i) = coefm(i) / cleff
+            !govrth(i)=g/(0.5*(thvx(i,kpbl(i))+thvx(i,kts)))
+            govrth(i)=g/(0.5*(thvx(i,kpbl2)+thvx(i,kts)))
+            !XNBV=sqrt(govrth(i)*(thvx(i,kpbl(i))-thvx(i,kts))/hpbl(i))
+            XNBV=sqrt(govrth(i)*(thvx(i,kpbl2)-thvx(i,kts))/hpbl2)
+!
+            !if(abs(XNBV/u1(i,kpbl(i))).gt.xlinv(i))then
+            if(abs(XNBV/u1(i,kpbl2)).gt.xlinv(i))then
+              !tauwavex0=0.5*XNBV*xlinv(i)*(2*MIN(var(i),75.))**2*ro(i,kts)*u1(i,kpbl(i))
+              !tauwavex0=0.5*XNBV*xlinv(i)*(2.*MIN(var(i),40.))**2*ro(i,kts)*u1(i,kpbl2)
+              !tauwavex0=0.5*XNBV*xlinv(i)*(2.*MIN(var(i),40.))**2*ro(i,kts)*u1(i,3)
+              tauwavex0=0.5*XNBV*xlinv(i)*(2.*MIN(var(i),varmax))**2*ro(i,kvar)*u1(i,kvar)
+              tauwavex0=tauwavex0*(1. - 1000./MAX(dxmeter,1000.))
+            else
+              tauwavex0=0.
+            endif
+!
+            !if(abs(XNBV/v1(i,kpbl(i))).gt.xlinv(i))then
+            if(abs(XNBV/v1(i,kpbl2)).gt.xlinv(i))then
+              !tauwavey0=0.5*XNBV*xlinv(i)*(2*MIN(var(i),75.))**2*ro(i,kts)*v1(i,kpbl(i))
+              !tauwavey0=0.5*XNBV*xlinv(i)*(2.*MIN(var(i),40.))**2*ro(i,kts)*v1(i,kpbl2)
+              !tauwavey0=0.5*XNBV*xlinv(i)*(2.*MIN(var(i),40.))**2*ro(i,kts)*v1(i,3)
+              tauwavey0=0.5*XNBV*xlinv(i)*(2.*MIN(var(i),varmax))**2*ro(i,kvar)*v1(i,kvar)
+              tauwavey0=tauwavey0*(1. - 1000./MAX(dxmeter,1000.))
+            else
+              tauwavey0=0.
+            endif
+!
+            do k=kts,kpbl(i) !MIN(kpbl2+1,kte-1)
+              !utendwave(i,k)=-1.*tauwavex0*2.*max((1.-za(i,k)/hpbl(i)),0.)/hpbl(i)
+              !vtendwave(i,k)=-1.*tauwavey0*2.*max((1.-za(i,k)/hpbl(i)),0.)/hpbl(i)
+              !utendwave(i,k)=-1.*tauwavex0 * max((1.-za(i,k)/hpbl(i)),0.)**2
+              !vtendwave(i,k)=-1.*tauwavey0 * max((1.-za(i,k)/hpbl(i)),0.)**2
+              utendwave(i,k)=-1.*tauwavex0 * max((1.-za(i,k)/hpbl2),0.)**2
+              vtendwave(i,k)=-1.*tauwavey0 * max((1.-za(i,k)/hpbl2),0.)**2
+            enddo
+          endif
+       endif
+    enddo ! end i loop
+
+   !add Beljaars et al. (2004, QJRMS, equ. 16) form drag:
+    do i=its,ite
+       IF ((xland1(i)-1.5) .le. 0.) then
+          !(IH*kflt**n1)**-1 = (0.00102*0.00035**-1.9)**-1 = 0.00026615161
+!orig:    a1=0.00026615161*var(i)**2
+          a1=0.00026615161*MIN(var(i),varmax)**2
+          ! k1**(n1-n2) = 0.003**(-1.9 - -2.8) = 0.003**0.9 = 0.005363
+          a2=a1*0.005363
+          DO k=kts,kte
+             wsp=SQRT(u1(i,k)**2 + v1(i,k)**2)
+             ! alpha*beta*Cmd*Ccorr*2.109 = 12.*1.*0.005*0.6*2.109 = 0.0759 
+              utendform(i,k)=-0.0759*wsp*u1(i,k)* &
+                           EXP(-(za(i,k)/1500.)**1.5)*a2*za(i,k)**(-1.2)* &
+                           (1. - 1000./MAX(dxmeter,1000.))
+              vtendform(i,k)=-0.0759*wsp*v1(i,k)* &
+                           EXP(-(za(i,k)/1500.)**1.5)*a2*za(i,k)**(-1.2)* &
+                           (1. - 1000./MAX(dxmeter,1000.))
+              IF(za(i,k) > 4000.) exit
+          ENDDO
+       ENDIF
+    ENDDO
+
+  ENDIF  ! end if gwd_opt > 1
+
+IF (gwd_opt .LE. 2) THEN
 !                                                                       
 !   now compute vertical structure of the stress.
 !
@@ -746,29 +906,40 @@ contains
      enddo                                                          
    enddo                                                             
 !
+ENDIF !gwd_opt <=2
+!
    do i = its,ite
      dusfc(i) = 0.
      dvsfc(i) = 0.
    enddo
 !
-   do k = kts,kte                                                       
-     do i = its,ite 
-       taud(i,k)  = taud(i,k) * dtfac(i)                              
-       dtaux = taud(i,k) * xn(i)
-       dtauy = taud(i,k) * yn(i)
-       dtaux2d(i,k) = dtaux
-       dtauy2d(i,k) = dtauy
-       dudt(i,k)  = dtaux + dudt(i,k)
-       dvdt(i,k)  = dtauy + dvdt(i,k)
-       dusfc(i)   = dusfc(i) + dtaux * del(i,k)
-       dvsfc(i)   = dvsfc(i) + dtauy * del(i,k)
-     enddo                                                          
-   enddo                                                             
+IF (gwd_opt .LE. 2) THEN
+     do k = kts,kte                                                       
+       do i = its,ite 
+         taud(i,k)  = taud(i,k) * dtfac(i)                              
+         dtaux = taud(i,k) * xn(i)
+         dtauy = taud(i,k) * yn(i)
+         dtaux2d(i,k) = dtaux
+         dtauy2d(i,k) = dtauy
+         dudt(i,k)  = dtaux + dudt(i,k) + utendwave(i,k) + utendform(i,k)
+         dvdt(i,k)  = dtauy + dvdt(i,k) + vtendwave(i,k) + vtendform(i,k)
+         dusfc(i)   = dusfc(i) + dtaux * del(i,k)
+         dvsfc(i)   = dvsfc(i) + dtauy * del(i,k)
+       enddo                                                          
+     enddo
 !
-   do i = its,ite
-     dusfc(i) = (-1./g*rcs) * dusfc(i)
-     dvsfc(i) = (-1./g*rcs) * dvsfc(i)
-   enddo
+     do i = its,ite
+       dusfc(i) = (-1./g*rcs) * dusfc(i)
+       dvsfc(i) = (-1./g*rcs) * dvsfc(i)
+     enddo
+ELSE
+     do k = kts,kte
+       do i = its,ite
+         dudt(i,k)  = dudt(i,k) + utendwave(i,k) + utendform(i,k)
+         dvdt(i,k)  = dvdt(i,k) + vtendwave(i,k) + vtendform(i,k)
+       enddo
+     enddo
+ENDIF                                                             
 !
    return                                                            
    end subroutine gwdo2d

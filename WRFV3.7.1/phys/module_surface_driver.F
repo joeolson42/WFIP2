@@ -3,7 +3,8 @@
 MODULE module_surface_driver
 CONTAINS
 
-   SUBROUTINE surface_driver(                                         &
+   SUBROUTINE surface_driver(spp_lsm,pattern_spp_lsm,field_sf,         &
+     &           spp_pbl,pattern_spp_pbl, &         !field_pbl,      &
      &           HYDRO_dt,sfcheadrt,INFXSRT,soldrain,                 &
      &           acgrdflx,achfx,aclhf                                 &
      &          ,acsnom,acsnow,snowfallac,akhs,akms,albedo,br,canwat  &
@@ -266,8 +267,6 @@ CONTAINS
      &          ,TS_URB2D_mosaic                                      &  !danli mosaic 
      &          ,TS_RUL2D_mosaic                                      &  !danli mosaic     
      &          ,ZOL                                                  &  !ckay
-     &          ,spp_lsm,pattern_spp_lsm,field_sf                     &  !SPP
-     &          ,spp_pbl,pattern_spp_pbl                              &  !SPP
      &                                                             )
               
 #if ( ! NMM_CORE == 1 )
@@ -2146,7 +2145,8 @@ CONTAINS
           CALL wrf_debug(100,'in MYNNSFC')          
 
          IF (FRACTIONAL_SEAICE == 1) THEN
-          CALL MYNN_SEAICE_WRAPPER(u_phytmp,v_phytmp,t_phy,qv_curr,&
+          CALL MYNN_SEAICE_WRAPPER(                                &
+               u_phytmp,v_phytmp,t_phy,qv_curr,                    &
                p_phy,dz8w,cp,g,rcp,r_d,xlv,psfc,chs,chs2,cqs2,cpm, &
                znt,ust,pblh,mavail,zol,mol,regime,psim,psih,       &
                xland,hfx,qfx,lh,tsk,flhc,flqc,qgh,qsfc,rmol,       &
@@ -2166,7 +2166,8 @@ CONTAINS
                i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte, &   
                ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,bl_mynn_cloudpdf)
          ELSE
-          CALL SFCLAY_mynn(u_phytmp,v_phytmp,t_phy,qv_curr,        &
+          CALL SFCLAY_mynn(                                        &
+               u_phytmp,v_phytmp,t_phy,qv_curr,                    &
                p_phy,dz8w,cp,g,rcp,r_d,xlv,psfc,chs,chs2,cqs2,cpm, &
                znt,ust,pblh,mavail,zol,mol,regime,psim,psih,       &
                xland,hfx,qfx,lh,tsk,flhc,flqc,qgh,qsfc,rmol,       &
@@ -4612,7 +4613,8 @@ CONTAINS
 
 !-------------------------------------------------------------------------
 
-   SUBROUTINE mynn_seaice_wrapper(U3D,V3D,T3D,QV3D,P3D,dz8w,       &
+   SUBROUTINE mynn_seaice_wrapper(&
+                     U3D,V3D,T3D,QV3D,P3D,dz8w,     &
                      CP,G,ROVCP,R,XLV,PSFC,CHS,CHS2,CQS2,CPM,      &
                      ZNT,UST,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH, &
                      XLAND,HFX,QFX,LH,TSK,FLHC,FLQC,QGH,QSFC,RMOL, &
@@ -4873,7 +4875,8 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
 !                 its,ite, jts,jte, kts,kte,                    &
 !                 ustm,ck,cka,cd,cda,isftcflx,iz0tlnd           )
 
-          CALL SFCLAY_mynn(U3D,V3D,T3D,QV3D,P3D,dz8w,              &
+          CALL SFCLAY_mynn(&
+               U3D,V3D,T3D,QV3D,P3D,dz8w,              &
                CP,G,ROVCP,R,XLV,PSFC,CHS,CHS2,CQS2,CPM,            &
                ZNT,UST,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH,       &
                XLAND,HFX,QFX,LH,TSK_LOCAL,FLHC,FLQC,QGH,QSFC,RMOL, &
@@ -4954,7 +4957,8 @@ TICE2TSK_IF2COLD,XICE_THRESHOLD,                                   &
 !                 ims,ime, jms,jme, kms,kme,                    &
 !                 its,ite, jts,jte, kts,kte,                    & ! 0
 !                 ustm_sea,ck_sea,cka_sea,cd_sea,cda_sea,isftcflx,iz0tlnd )
-          CALL SFCLAY_mynn(U3D,V3D,T3D,QV3D,P3D,dz8w,              &
+          CALL SFCLAY_mynn(  &
+               U3D,V3D,T3D,QV3D,P3D,dz8w,              &
                CP,G,ROVCP,R,XLV,PSFC,                              &
                CHS_SEA,CHS2_SEA,CQS2_SEA,CPM_SEA,                  &
                ZNT_SEA,UST_SEA,                                    &

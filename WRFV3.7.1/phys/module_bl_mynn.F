@@ -878,7 +878,7 @@ CONTAINS
         cns  = 3.5
         alp1 = 0.23
         alp2 = 0.3
-        alp3 = 3.0
+        alp3 = 2.0
         alp4 = 10.
         alp5 = 0.3 !obsolete?
 
@@ -932,13 +932,13 @@ CONTAINS
                   &       *( 1.0 + alp3/alp2*&
                   &SQRT( vsc/( bv*elt ) ) )
               elb = MIN(alp2*qkw(k)/bv, zwk)
-              elf = elb
-              IF (zwk > zi .AND. elf > 400.) THEN
-                 ! COMPUTE BouLac mixing length
-                 !CALL boulac_length0(k,kts,kte,zw,dz,qtke,thetaw,elBLmin0,elBLavg0)
-                 !elf = alp5*elBLavg0
-                 elf = MIN(MAX(50.*SQRT(qtke(k)), 400.), zwk)
-              ENDIF
+              elf = elb/(1. + (elb/600.))  !bound free-atmos mixing length to < 600 m.
+              !IF (zwk > zi .AND. elf > 400.) THEN
+              !   ! COMPUTE BouLac mixing length
+              !   !CALL boulac_length0(k,kts,kte,zw,dz,qtke,thetaw,elBLmin0,elBLavg0)
+              !   !elf = alp5*elBLavg0
+              !   elf = MIN(MAX(50.*SQRT(qtke(k)), 400.), zwk)
+              !ENDIF
 
            ELSE
               ! use version in development for RAP/HRRR 2016
@@ -977,7 +977,7 @@ CONTAINS
 
          ! "el_unstab" = blended els-elt
          el_unstab = els/(1. + (els1/elt))
-         el(k) = MIN(el_unstab, elb)
+         el(k) = MIN(el_unstab, elb_mf)
          el(k) = el(k)*(1.-wt) + elf*wt
 
          ! include scale-awareness.
@@ -2420,7 +2420,10 @@ CONTAINS
                                                  ! in CB02
 
            zagl = zagl + dz(k)
-           ls_min = MIN(MAX(zagl,25.),300.) ! Let this be the minimum possible length scale:
+
+           ls_min = 400. + MIN(3.*MAX(HFX1,0.),500.)
+           ls_min = MIN(MAX(zagl,25.),ls_min) ! Let this be the minimum possible length scale:
+           if (zagl > PBLH1+2000.) ls_min = MAX(ls_min + 0.5*(PBLH1+2000.-zagl),400.)
                                         !   25 m < ls_min(=zagl) < 300 m
            lfac=MIN(4.25+dx/4000.,6.)   ! A dx-dependent multiplier for the master length scale:
                                         !   lfac(750 m) = 4.4
@@ -2596,8 +2599,8 @@ CONTAINS
            alpha = 0.61*th(k)
            beta  = (th(k)/t)*(xl/cp) - 1.61*th(k)
        
-           vt(k) = qww   - cld(k)*beta*bb*Fng   - 1.
-           vq(k) = alpha + cld(k)*beta*a(k)*Fng - tv0
+           vt(k) = qww   - MIN(cld(k),0.5)*beta*bb*Fng   - 1.
+           vq(k) = alpha + MIN(cld(k),0.5)*beta*a(k)*Fng - tv0
            ! vt and vq correspond to beta-theta and beta-q, respectively,  
            ! in NN09, Eq. B8.  They also correspond to the bracketed
            ! expressions in BCMT95, Eq. 15, since (s*ql/sigma^2) = cldfra*Fng
@@ -3548,7 +3551,7 @@ ENDIF
 !local vars
     INTEGER :: ITF,JTF,KTF, IMD,JMD
     INTEGER :: i,j,k
-    REAL, DIMENSION(KTS:KTE) :: thl,tl,sqv,sqc,sqi,sqw,&
+    REAL, DIMENSION(KTS:KTE) :: thl,thvl,tl,sqv,sqc,sqi,sqw,&
          &El, Dfm, Dfh, Dfq, Tcd, Qcd, Pdk, Pdt, Pdq, Pdc, &
          &Vt, Vq, sgm
 
@@ -3669,7 +3672,7 @@ ENDIF
                 ELSE
                    zw(k)=zw(k-1)+dz(i,k-1,j)
                 ENDIF
-
+                thvl(k)=thl(k)*(1.+0.61*sqv(k))
                 exch_m(i,k,j)=0.
                 exch_h(i,k,j)=0.
                 K_q(i,k,j)=0.
@@ -3699,7 +3702,8 @@ ENDIF
 
              zw(kte+1)=zw(kte)+dz(i,kte,j)
 
-             CALL GET_PBLH(KTS,KTE,PBLH(i,j),thetav,&
+!             CALL GET_PBLH(KTS,KTE,PBLH(i,j),thetav,&
+             CALL GET_PBLH(KTS,KTE,PBLH(i,j),thvl,&
                &  Qke1,zw,dz1,xland(i,j),KPBL(i,j))
              
              IF (scaleaware > 0.) THEN
@@ -3812,6 +3816,7 @@ ENDIF
                 qnc1(k)=0.0
              ENDIF
              thetav(k)=th(i,k,j)*(1.+0.608*sqv(k))
+             thvl(k)=thl(k)*(1.+0.61*sqv(k))
              p1(k) = p(i,k,j)
              ex1(k)= exner(i,k,j)
              el(k) = el_pbl(i,k,j)
@@ -3875,7 +3880,8 @@ ENDIF
           ENDDO
 #endif
 
-          CALL GET_PBLH(KTS,KTE,PBLH(i,j),thetav,&
+!          CALL GET_PBLH(KTS,KTE,PBLH(i,j),thetav,&
+          CALL GET_PBLH(KTS,KTE,PBLH(i,j),thvl,&
           & Qke1,zw,dz1,xland(i,j),KPBL(i,j))
 
           IF (scaleaware > 0.) THEN
@@ -4390,10 +4396,11 @@ ENDIF
 !    DO WHILE (zi .EQ. 0.) 
     DO k=kts+1,kte-1
        IF (thetav1D(k) .GE. (minthv + delt_thv))THEN
-          kzi = MAX(k-1,1)
+          !kzi = MAX(k-1,1)
           zi = zw1D(k) - dz1D(k-1)* &
              & MIN((thetav1D(k)-(minthv + delt_thv))/ &
              & MAX(thetav1D(k)-thetav1D(k-1),1E-6),1.0)
+          kzi= MAX(k-1,1) + NINT((zi-zw1D(k-1))/dz1D(k-1))
        ENDIF
        !k = k+1
        IF (k .EQ. kte-1) zi = zw1D(kts+1) !EXIT SAFEGUARD
@@ -4414,11 +4421,12 @@ ENDIF
        qtke  =MAX(Qke1D(k)/2.,0.)      ! maximum TKE
        qtkem1=MAX(Qke1D(k-1)/2.,0.)
        IF (qtke .LE. TKEeps) THEN
-           kzi2 = MAX(k-1,1)
+           !kzi2 = MAX(k-1,1)
            PBLH_TKE = zw1D(k) - dz1D(k-1)* &
              & MIN((TKEeps-qtke)/MAX(qtkem1-qtke, 1E-6), 1.0)
            !IN CASE OF NEAR ZERO TKE, SET PBLH = LOWEST LEVEL.
            PBLH_TKE = MAX(PBLH_TKE,zw1D(kts+1))
+           kzi2 = MAX(k-1,1) + NINT((PBLH_TKE-zw1D(k-1))/dz1D(k-1))
            !print *,"PBLH_TKE:",i,j,PBLH_TKE, Qke1D(k)/2., zw1D(kts+1)
        ENDIF
        !k = k+1
@@ -4534,7 +4542,7 @@ ENDIF
 
      REAL,DIMENSION(KTS:KTE), INTENT(INOUT) :: qc_bl1d,cldfra_bl1d
 
-    INTEGER, PARAMETER :: NUP=10
+    INTEGER, PARAMETER :: NUP=10, debug_mf=0
   ! local variables
   ! updraft properties
      REAL,DIMENSION(KTS:KTE+1,1:NUP) :: UPW,UPTHL,UPQT,UPQC,UPQV,  &
@@ -4546,7 +4554,7 @@ ENDIF
      INTEGER :: K,I,k50
      REAL :: fltv,wstar,qstar,thstar,sigmaW,sigmaQT,sigmaTH,z0,    &
              pwmin,pwmax,wmin,wmax,wlv,wtv,Psig_w,maxw,maxqc,wpbl
-     REAL :: B,QTn,THLn,THVn,QCn,Un,Vn,QKEn,Wn2,EntEXP,EntW
+     REAL :: B,QTn,THLn,THVn,QCn,Un,Vn,QKEn,Wn2,Wn,EntEXP,EntW,BCOEFF
 
   ! w parameters
      REAL,PARAMETER :: &
@@ -4561,7 +4569,7 @@ ENDIF
          & ENT0=0.1
 
   ! Implement ideas from Neggers (2016, JAMES):
-     REAL, PARAMETER :: Atot = 0.12 ! Maximum total fractional area of all updrafts
+     REAL, PARAMETER :: Atot = 0.10 ! Maximum total fractional area of all updrafts
      REAL, PARAMETER :: lmax = 1000.! diameter of largest plume
      REAL, PARAMETER :: dl   = 100. ! diff size of each plume - the differential multiplied by the integrand
      REAL, PARAMETER :: dcut = 1.0  ! max diameter of plume to parameterize relative to dx (km)
@@ -4583,23 +4591,15 @@ ENDIF
   !JOE: add declaration of ERF
    REAL :: ERF
 
-  !JOE: add option to switch cloud fraction calculations:
-   INTEGER, PARAMETER :: cldfra_opt = 0  ! 0: Chaboureau and Bechtold (2005, JGR)
-                                         ! 1: Xu & Randall (1994)
-  !JOE:add for cldfra
-   REAL :: xcldfra, UMF_new, dcf, ktop_dcf, kbcon_dcf
-  ! PARAMETERS FOR RANDALL AND XU (1996) CLOUD FRACTION
-   REAL, PARAMETER  ::  coef_p = 0.25, coef_gamm = 0.49, coef_alph = 100.
-   REAL :: satvp,rhgrid,h2oliq
    LOGICAL :: superadiabatic
 
   ! VARIABLES FOR CHABOUREAU-BECHTOLD CLOUD FRACTION
    REAL,DIMENSION(KTS:KTE), INTENT(INOUT) :: vt, vq, sgm
    REAL :: sigq,xl,tlk,qsat_tl,rsl,cpm,a,qmq,mf_cf,diffqt,&
-           Fng,qww,alpha,beta,bb,f,pt,t,q2p,b9
+           Fng,qww,alpha,beta,bb,f,pt,t,q2p,b9,satvp,rhgrid
 
    ! WA TEST 11/9/15 for consistent reduction of updraft params
-   REAL :: csigma,acfac
+   REAL :: csigma,acfac,EntThrottle
 
    !JOE- plume overshoot
    INTEGER :: overshoot
@@ -4738,7 +4738,7 @@ ENDIF
       width_flx = MAX(MIN(1000.*(0.6*tanh((flt - 0.120)/0.03) + .5),1000.), 0.)
     ELSE
       !width_flx = MAX(MIN(1000.*(0.6*tanh((flt - 0.085)/0.04) + .5),1000.), 0.)
-      width_flx = MAX(MIN(1000.*(0.6*tanh((flt - 0.070)/0.03) + .5),1000.), 0.)
+      width_flx = MAX(MIN(1000.*(0.6*tanh((flt - 0.050)/0.03) + .5),1000.), 0.)
     ENDIF
     maxwidth = MIN(maxwidth,width_flx)
   ENDIF
@@ -4772,7 +4772,8 @@ ENDIF
        UPA(1,I) = N*l*l/(dx*dx) * dl        ! fractional area of plume n
        ! Make updraft area (UPA) a function of the buoyancy flux
 !       acfac = .5*tanh((fltv - 0.05)/0.2) + .5
-       acfac = .5*tanh((fltv - 0.07)/0.09) + .5 
+!       acfac = .5*tanh((fltv - 0.07)/0.09) + .5 
+       acfac = .5*tanh((fltv - 0.03)/0.09) + .5
        UPA(1,I)=UPA(1,I)*acfac
        An2 = An2 + UPA(1,I)                 ! total fractional area of all plumes
        !print*," plume size=",l,"; area=",An,"; total=",An2
@@ -4869,6 +4870,7 @@ ENDIF
 
     ENDDO
 
+  EntThrottle = 0.001  !MAX(0.02/MAX((flt*1.25*1004.)-25.,5.),0.0002)
   !QCn = 0.
   ! do integration  updraft
     DO I=1,NUP !NUP2
@@ -4877,17 +4879,16 @@ ENDIF
        overshoot = 0
        l  = dl*I                            ! diameter of plume
        DO k=KTS+1,KTE
-
           !w-dependency for entrainment a la Tian and Kuang (2016)
-          ENT(k,i) = 0.75/(MIN(MAX(UPW(K-1,I),0.75),1.25)*l)
+          ENT(k,i) = 0.5/(MIN(MAX(UPW(K-1,I),0.75),1.5)*l)
           !Entrainment from Negggers (2015, JAMES)
           !ENT(k,i) = 0.02*l**-0.35 - 0.0009
           !JOE - implement minimum background entrainment 
-          ENT(k,i) = max(ENT(k,i),0.0006)
+          ENT(k,i) = max(ENT(k,i),0.0003)
           !ENT(k,i) = max(ENT(k,i),0.05/ZW(k))  !not needed for Tian and Kuang
           !JOE - increase entrainment for plumes extending very high.
           IF(ZW(k) >= pblh+1500.) ENT(k,i) =ENT(k,i) + (ZW(k)-(pblh+1500.)) * 5.0E-6
-          IF(UPW(K-1,I) > 1.6) ENT(k,i) = ENT(k,i) + 0.004*(UPW(K-1,I) - 1.6)
+          IF(UPW(K-1,I) > 2.0) ENT(k,i) = ENT(k,i) + EntThrottle*(UPW(K-1,I) - 2.0)
           ENT(k,i) = min(ENT(k,i),0.9/(ZW(k)-ZW(k-1)))
 
           ! Linear entrainment:
@@ -4919,36 +4920,63 @@ ENDIF
           call condensation_edmf(QTn,THLn,(P(K)+P(K-1))/2.,ZW(k),THVn,QCn)
 
           B=g*(0.5*(THVn+UPTHV(k-1,I))/THV(k-1) - 1.0)
-
-          EntW=exp(-2.*(Wb+Wc*ENT(K,I))*(ZW(k)-ZW(k-1)))
-          Wn2=UPW(K-1,I)**2*EntW + (1.-EntW)*0.5*Wa*B/(Wb+Wc*ENT(K,I))
-          Wn2=MAX(Wn2,0.0)
-
-          !Allow strongly forced plumes to overshoot if KE is sufficient
-          IF (fltv > 0.05 .AND. Wn2 <= 0 .AND. overshoot == 0) THEN
-             overshoot = 1
-             IF ( THV(k)-THV(k-1) .GT. 0.0 ) THEN
-                bvf = SQRT( gtr*(THV(k)-THV(k-1))/(0.5*(dz(k)+dz(k-1))) )
-                !vertical Froude number
-                Frz = UPW(K-1,I)/(bvf*0.5*(dz(k)+dz(k-1)))
-                IF ( Frz >= 0.5 ) Wn2 =  MIN(Frz,1.0)*(UPW(K-1,I)**2) 
-             ENDIF
-          ELSEIF (fltv > 0.05 .AND. overshoot == 1) THEN
-             !Do not let overshooting parcel go more than 1 layer up
-             Wn2 = 0.0
+          IF(B>0.)THEN
+            BCOEFF = 0.15        !0.11 gives maxmf similar to Kay's scheme, w typically stays < 2.0, so doesn't hit the limits nearly as much
+          ELSE
+            BCOEFF = 0.2 !0.33
           ENDIF
+
+          ! Original StEM with exponential entrainment
+          !EntW=exp(-2.*(Wb+Wc*ENT(K,I))*(ZW(k)-ZW(k-1)))
+          !Wn2=UPW(K-1,I)**2*EntW + (1.-EntW)*0.5*Wa*B/(Wb+Wc*ENT(K,I))
+          ! Original StEM with linear entrainment
+          !Wn2=UPW(K-1,I)**2*(1.-EntExp) + EntExp*0.5*Wa*B/(Wb+Wc*ENT(K,I))
+          !Wn2=MAX(Wn2,0.0)
+          !WA: TEMF form
+          IF (B>0.0 .AND. UPW(K-1,I) < 0.2 ) THEN
+             Wn = UPW(K-1,I) + (-2. * ENT(K,I) * UPW(K-1,I) + BCOEFF*B / MAX(UPW(K-1,I),0.2)) * (ZW(k)-ZW(k-1))
+          ELSE
+             Wn = UPW(K-1,I) + (-2. * ENT(K,I) * UPW(K-1,I) + BCOEFF*B / UPW(K-1,I)) * (ZW(k)-ZW(k-1))
+          ENDIF
+          !Do not allow a parcel to accelerate more than 1.5 m/s over 200 m
+          IF(Wn > UPW(K-1,I)+1.5*(ZW(k)-ZW(k-1))/200.)Wn=UPW(K-1,I)+1.5*(ZW(k)-ZW(k-1))/200.
+          Wn = MAX(Wn,0.0)
+
+!          IF (Wn > 10.0) THEN
+!             ! surface values
+!             print *," **** PROBLEMATIC W:"
+!             print *,' QCn:',QCn,' ENT=',ENT(k,i),' Nup2=',Nup2
+!             print *,'pblh:',pblh,' Wn:',Wn,' UPW(k-1)=',UPW(K-1,I)
+!             print *,'K=',k,' B=',B,' dz=',ZW(k)-ZW(k-1) 
+!          ENDIF
+
+!          !Allow strongly forced plumes to overshoot if KE is sufficient
+!          IF (fltv > 0.05 .AND. Wn2 <= 0 .AND. overshoot == 0) THEN
+!             overshoot = 1
+!             IF ( THV(k)-THV(k-1) .GT. 0.0 ) THEN
+!                bvf = SQRT( gtr*(THV(k)-THV(k-1))/(0.5*(dz(k)+dz(k-1))) )
+!                !vertical Froude number
+!                Frz = UPW(K-1,I)/(bvf*0.5*(dz(k)+dz(k-1)))
+!                IF ( Frz >= 0.5 ) Wn2 =  MIN(Frz,1.0)*(UPW(K-1,I)**2) 
+!             ENDIF
+!          ELSEIF (fltv > 0.05 .AND. overshoot == 1) THEN
+!             !Do not let overshooting parcel go more than 1 layer up
+!             Wn2 = 0.0
+!          ENDIF
 
           !Limit very tall plumes
-          Wn2=Wn2*EXP(-MAX(ZW(k)-(pblh+2000.),0.0)/1000.)
-          IF(ZW(k) >= pblh+3000.)Wn2=0.
- 
+!          Wn2=Wn2*EXP(-MAX(ZW(k)-(pblh+2000.),0.0)/1000.)
+!          IF(ZW(k) >= pblh+3000.)Wn2=0.
+          Wn=Wn*EXP(-MAX(ZW(k)-(pblh+2000.),0.0)/1000.)
+          IF(ZW(k) >= pblh+3000.)Wn=0.
+
           !JOE- minimize the plume penetratration in stratocu-topped PBL
           IF (fltv < 0.06) THEN
-             IF(ZW(k) >= pblh-200. .AND. qc(k) > 1e-5 .AND. I > 2) Wn2=0.
+             IF(ZW(k) >= pblh-200. .AND. qc(k) > 1e-5 .AND. I > 4) Wn=0.
           ENDIF
 
-          IF (Wn2 > 0.) THEN
-             UPW(K,I)=sqrt(Wn2)
+          IF (Wn > 0.) THEN
+             UPW(K,I)=Wn  !Wn !sqrt(Wn2)
              UPTHV(K,I)=THVn
              UPTHL(K,I)=THLn
              UPQT(K,I)=QTn
@@ -4967,6 +4995,24 @@ ENDIF
              exit  !exit k-loop
           END IF
        ENDDO
+       IF (debug_mf == 1) THEN
+          IF (MAXVAL(UPW(:,I)) > 10.0 .OR. MINVAL(UPA(:,I)) < 0.0 .OR. &
+              MAXVAL(UPA(:,I)) > Atot .OR. NUP2 > 10) THEN
+             ! surface values
+             print *,'flq:',flq,' fltv:',fltv,' Nup2=',Nup2
+             print *,'pblh:',pblh,' wstar:',wstar,' ktop=',ktop
+             print *,'sigmaW=',sigmaW,' sigmaTH=',sigmaTH,' sigmaQT=',sigmaQT
+             ! means
+             print *,'u:',u
+             print *,'v:',v
+             print *,'thl:',thl
+             print *,'UPA:',UPA(:,I)
+             print *,'UPW:',UPW(:,I)
+             print *,'UPTHL:',UPTHL(:,I)
+             print *,'UPQT:',UPQT(:,I)
+             print *,'ENT:',ENT(:,I)
+          ENDIF
+       ENDIF
     ENDDO
   ELSE
     !At least one of the conditions was not met for activating the MF scheme.
@@ -4994,7 +5040,7 @@ ENDIF
           edmf_chem(k,ic) = edmf_chem(k,ic) + UPA(K+1,I)*UPCHEM(k,I,ic)
         enddo
 #endif
-      ENDDO 
+      ENDDO
 
       IF (edmf_a(k)>0.) THEN
         edmf_w(k)=edmf_w(k)/edmf_a(k)
@@ -5079,13 +5125,13 @@ ENDIF
             else
                f = 1.0
             endif
-            sigq = 6.E-3 * edmf_a(k) * edmf_w(k) * f ! convective component of sigma (CB2005)
+            sigq = 9.E-3 * edmf_a(k) * edmf_w(k) * f ! convective component of sigma (CB2005)
             !sigq = MAX(sigq, 1.0E-4)         
             sigq = SQRT(sigq**2 + sgm(k)**2)    ! combined conv + stratus components
 
             qmq = a * (qt(k) - qsat_tl)         ! saturation deficit/excess;
                                                 !   the numerator of Q1
-            mf_cf = min(max(0.5 + 0.36 * atan(1.55*(qmq/sigq)),0.01),1.0)
+            mf_cf = min(max(0.5 + 0.36 * atan(1.55*(qmq/sigq)),0.02),0.6)
             !IF ( wrf_at_debug_level(MYNN_DBG_LVL) ) THEN
             !   print*,"In MYNN, StEM edmf"
             !   print*,"  CB: qt=",qt(k)," qsat=",qsat_tl," satdef=",qt(k) - qsat_tl
@@ -5115,8 +5161,8 @@ ENDIF
             !cloud-fraction bounding was added to improve cloud retention,
             !following RAP and HRRR testing.
             Fng = 2.05 ! the non-Gaussian transport factor (assumed constant)
-            vt(k) = qww   - MIN(0.25,cldfra_bl1D(k))*beta*bb*Fng - 1.
-            vq(k) = alpha + MIN(0.25,cldfra_bl1D(k))*beta*a*Fng  - tv0
+            vt(k) = qww   - MIN(0.20,cldfra_bl1D(k))*beta*bb*Fng - 1.
+            vq(k) = alpha + MIN(0.20,cldfra_bl1D(k))*beta*a*Fng  - tv0
          ENDIF
 
       ENDDO

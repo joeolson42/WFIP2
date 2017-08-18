@@ -472,7 +472,7 @@ CONTAINS
            qsfc(i,j) = qvg(i,j)/(1.+qvg(i,j))
            SMELT(i,j) = 0.
            SNOM (i,j) = 0.
-!           ACSNOW(i,j) = 0.
+           ACSNOW(i,j) = 0.
            SNOWFALLAC(i,j) = 0.
            PRECIPFR(i,j) = 0.
            RHOSNF(i,j) = -1.e3 ! non-zero flag
@@ -797,7 +797,7 @@ CONTAINS
              SNOWC(I,J)=0.0
            LMAVAIL(I,J)=1.0
 ! accumulated water equivalent of frozen precipitation over water [mm]
-!           acsnow(i,j)=acsnow(i,j)+precipfr(i,j)
+           acsnow(i,j)=acsnow(i,j)+precipfr(i,j)
 
            ILAND=iswater
 !           ILAND=16
@@ -1443,14 +1443,6 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
         EMISSN = 0.98
         EMISS_snowfree = LEMITBL(IVGTYP)
 
-!beka stochastic pert of soil mositure
-!      if(spp_lsm == 1) then
-!! stochastic perturbations for soil moisture
-!         do k=1,nzs
-!            soilm1d(k)=max(0.,min(soilm1d(k)*(1+rstochcol(k)),dqm))
-!         enddo
-!      endif
-
 !--- sea ice properties
 !--- N.N Zubov "Arctic Ice"
 !--- no salinity dependence because we consider the ice pack
@@ -1496,7 +1488,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
            newsn=newsnms*delt
 !---- ACSNOW - run-total snowfall water [mm]
-!           acsnow=acsnow+newsn*1.e3
+           acsnow=acsnow+newsn*1.e3
 
        IF(NEWSN.GT.0.) THEN
 !       IF(NEWSN.GE.1.E-8) THEN
@@ -1504,8 +1496,6 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
       print *, 'THERE IS NEW SNOW, newsn', newsn
     ENDIF
-
-        newsnowratio = min(1.,newsn/(snwe+newsn))
 
 !*** Calculate fresh snow density (t > -15C, else MIN value)
 !*** Eq. 10 from Koren et al. (1999)
@@ -1584,17 +1574,17 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
           CST=SAT
           DRIP=DD1-SAT
         ENDIF
-     else
-         CST=0.
-         DRIP=0.
-         interw=0.
-         intersn=0.
-         infwater=PRCPMS
-     endif ! vegfrac > 0.01
+      else
+          CST=0.
+          DRIP=0.
+          interw=0.
+          intersn=0.
+          infwater=PRCPMS
+      endif ! vegfrac > 0.01
 
        IF(NEWSN.GT.0.) THEN
 !Update snow on the ground
-         snwe=max(0.,snwe+newsn-intersn)
+         snwe=snwe+newsn-intersn
 !      if(drip > 0.) then
 !       if (snow_mosaic==1.) then
 !         dripsn = drip*snowfrac
@@ -1604,19 +1594,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 !         snwe=snwe+drip
 !       endif
 !      endif
-! Add drip to snow on the ground
-      if(drip > 0.) then
-       if (snow_mosaic==1.) then
-         dripliq=drip*intwratio
-         dripsn = drip - dripliq
-         snwe=snwe+dripsn
-         infwater=infwater+dripliq
-         dripliq=0.
-         dripsn = 0.
-       else
-         snwe=snwe+drip
-       endif
-      endif
+!         newsnowratio = min(1.,newsn/snwe)
          snhei=snwe*rhowater/rhosn
          NEWSN=NEWSN*rhowater/rhonewsn
        ENDIF
@@ -1667,6 +1645,22 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
              KEEP_SNOW_ALBEDO = 1.
              snow_mosaic=0.  ! ???
       ENDIF
+
+! Add drip to snow on the ground
+      if(drip > 0.) then
+       if (snow_mosaic==1.) then
+         dripliq=drip*intwratio
+         dripsn = drip - dripliq
+         snwe=snwe+dripsn
+         infwater=infwater+dripliq
+         dripliq=0.
+         dripsn = 0.
+       else
+         snwe=snwe+drip
+       endif
+      endif
+         newsnowratio = min(1.,newsn/snwe)
+         snhei=snwe*rhowater/rhosn
 
     IF ( wrf_at_debug_level(LSMRUC_DBG_LVL) ) THEN
       print *,'SNHEI_CRIT,SNOWFRAC,SNHEI_CRIT_newsn,SNOWFRACnewsn', &
