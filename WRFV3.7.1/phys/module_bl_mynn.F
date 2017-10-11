@@ -4887,7 +4887,9 @@ ENDIF
           ENT(k,i) = max(ENT(k,i),0.0003)
           !ENT(k,i) = max(ENT(k,i),0.05/ZW(k))  !not needed for Tian and Kuang
           !JOE - increase entrainment for plumes extending very high.
-          IF(ZW(k) >= pblh+1500.) ENT(k,i) =ENT(k,i) + (ZW(k)-(pblh+1500.)) * 5.0E-6
+          IF(ZW(k) >= MIN(pblh+1500., 3500.))THEN
+            ENT(k,i)=ENT(k,i) + (ZW(k)-MIN(pblh+1500.,3500.))*5.0E-6
+          ENDIF
           IF(UPW(K-1,I) > 2.0) ENT(k,i) = ENT(k,i) + EntThrottle*(UPW(K-1,I) - 2.0)
           ENT(k,i) = min(ENT(k,i),0.9/(ZW(k)-ZW(k-1)))
 
@@ -4932,43 +4934,52 @@ ENDIF
           ! Original StEM with linear entrainment
           !Wn2=UPW(K-1,I)**2*(1.-EntExp) + EntExp*0.5*Wa*B/(Wb+Wc*ENT(K,I))
           !Wn2=MAX(Wn2,0.0)
-          !WA: TEMF form
-          IF (B>0.0 .AND. UPW(K-1,I) < 0.2 ) THEN
-             Wn = UPW(K-1,I) + (-2. * ENT(K,I) * UPW(K-1,I) + BCOEFF*B / MAX(UPW(K-1,I),0.2)) * (ZW(k)-ZW(k-1))
-          ELSE
-             Wn = UPW(K-1,I) + (-2. * ENT(K,I) * UPW(K-1,I) + BCOEFF*B / UPW(K-1,I)) * (ZW(k)-ZW(k-1))
-          ENDIF
-          !Do not allow a parcel to accelerate more than 1.5 m/s over 200 m
-          IF(Wn > UPW(K-1,I)+1.5*(ZW(k)-ZW(k-1))/200.)Wn=UPW(K-1,I)+1.5*(ZW(k)-ZW(k-1))/200.
-          Wn = MAX(Wn,0.0)
 
-!          IF (Wn > 10.0) THEN
-!             ! surface values
-!             print *," **** PROBLEMATIC W:"
-!             print *,' QCn:',QCn,' ENT=',ENT(k,i),' Nup2=',Nup2
-!             print *,'pblh:',pblh,' Wn:',Wn,' UPW(k-1)=',UPW(K-1,I)
-!             print *,'K=',k,' B=',B,' dz=',ZW(k)-ZW(k-1) 
-!          ENDIF
+          !WA: TEMF form. 
+          !JOE-add dz max of 250, so accelerations aren't unphysically large for coarse 
+          !vertical grid spacing.
+!          IF (B>0.0 .AND. UPW(K-1,I) < 0.2 ) THEN
+          IF (UPW(K-1,I) < 0.2 ) THEN
+             Wn = UPW(K-1,I) + (-2. * ENT(K,I) * UPW(K-1,I) + BCOEFF*B / MAX(UPW(K-1,I),0.2)) * MIN(ZW(k)-ZW(k-1), 250.)
+          ELSE
+             Wn = UPW(K-1,I) + (-2. * ENT(K,I) * UPW(K-1,I) + BCOEFF*B / UPW(K-1,I)) * MIN(ZW(k)-ZW(k-1), 250.)
+          ENDIF
+          !Do not allow a parcel to accelerate more than 1.25 m/s over 200 m. 
+          !Add max increase of 2.0 m/s for coarse vertical resolution.
+          IF(Wn > UPW(K-1,I) + MIN(1.25*(ZW(k)-ZW(k-1))/200., 2.0) ) THEN
+             Wn = UPW(K-1,I) + MIN(1.25*(ZW(k)-ZW(k-1))/200., 2.0)
+          ENDIF
+          Wn = MIN(MAX(Wn,0.0), 3.0)
+
+          IF (debug_mf == 1) THEN
+            IF (Wn .GE. 3.0) THEN
+              ! surface values
+              print *," **** SUSPICIOUSLY LARGE W:"
+              print *,' QCn:',QCn,' ENT=',ENT(k,i),' Nup2=',Nup2
+              print *,'pblh:',pblh,' Wn:',Wn,' UPW(k-1)=',UPW(K-1,I)
+              print *,'K=',k,' B=',B,' dz=',ZW(k)-ZW(k-1) 
+            ENDIF
+          ENDIF
 
 !          !Allow strongly forced plumes to overshoot if KE is sufficient
-!          IF (fltv > 0.05 .AND. Wn2 <= 0 .AND. overshoot == 0) THEN
-!             overshoot = 1
-!             IF ( THV(k)-THV(k-1) .GT. 0.0 ) THEN
-!                bvf = SQRT( gtr*(THV(k)-THV(k-1))/(0.5*(dz(k)+dz(k-1))) )
-!                !vertical Froude number
-!                Frz = UPW(K-1,I)/(bvf*0.5*(dz(k)+dz(k-1)))
-!                IF ( Frz >= 0.5 ) Wn2 =  MIN(Frz,1.0)*(UPW(K-1,I)**2) 
-!             ENDIF
-!          ELSEIF (fltv > 0.05 .AND. overshoot == 1) THEN
-!             !Do not let overshooting parcel go more than 1 layer up
-!             Wn2 = 0.0
-!          ENDIF
+          IF (fltv > 0.05 .AND. Wn <= 0 .AND. overshoot == 0) THEN
+             overshoot = 1
+             IF ( THV(k)-THV(k-1) .GT. 0.0 ) THEN
+                bvf = SQRT( gtr*(THV(k)-THV(k-1))/(0.5*(dz(k)+dz(k-1))) )
+                !vertical Froude number
+                Frz = UPW(K-1,I)/(bvf*0.5*(dz(k)+dz(k-1)))
+                IF ( Frz >= 0.5 ) Wn =  MIN(Frz,1.0)*UPW(K-1,I)
+             ENDIF
+          ELSEIF (fltv > 0.05 .AND. overshoot == 1) THEN
+             !Do not let overshooting parcel go more than 1 layer up
+             Wn = 0.0
+          ENDIF
 
           !Limit very tall plumes
 !          Wn2=Wn2*EXP(-MAX(ZW(k)-(pblh+2000.),0.0)/1000.)
 !          IF(ZW(k) >= pblh+3000.)Wn2=0.
-          Wn=Wn*EXP(-MAX(ZW(k)-(pblh+2000.),0.0)/1000.)
-          IF(ZW(k) >= pblh+3000.)Wn=0.
+          Wn=Wn*EXP(-MAX(ZW(k) - MIN(pblh+2000.,3000.),0.0)/1000.)
+          IF(ZW(k) >= MIN(pblh+3000.,4500.))Wn=0.
 
           !JOE- minimize the plume penetratration in stratocu-topped PBL
           IF (fltv < 0.06) THEN
@@ -4996,7 +5007,7 @@ ENDIF
           END IF
        ENDDO
        IF (debug_mf == 1) THEN
-          IF (MAXVAL(UPW(:,I)) > 10.0 .OR. MINVAL(UPA(:,I)) < 0.0 .OR. &
+          IF (MAXVAL(UPW(:,I)) .GE. 3. .OR. MINVAL(UPA(:,I)) < 0.0 .OR. &
               MAXVAL(UPA(:,I)) > Atot .OR. NUP2 > 10) THEN
              ! surface values
              print *,'flq:',flq,' fltv:',fltv,' Nup2=',Nup2
