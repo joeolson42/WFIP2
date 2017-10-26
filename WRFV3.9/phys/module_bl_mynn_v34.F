@@ -2159,7 +2159,7 @@ CONTAINS
        &xland,ts,qsfc,qcg,ps,&
        &ust,ch,hfx,qfx,rmol,wspd,&
        &vdfg,&                          !Katata-added for fog dep
-       &Qke,&
+       &Qke,tke_pbl,&
        &qke_adv,bl_mynn_tkeadvect,&     !ACF for QKE advection
        &Tsq,Qsq,Cov,&
        &Du,Dv,Dth,&
@@ -2209,6 +2209,7 @@ CONTAINS
 
     REAL, DIMENSION(IMS:IME,KMS:KME,JMS:JME), INTENT(inout) :: &
          &Qke,Tsq,Qsq,Cov, &
+         &tke_pbl, & !JOE-added for coupling (TKE_PBL = QKE/2)
 !ACF for QKE advection
          &qke_adv
 !ACF-end
@@ -2238,11 +2239,13 @@ CONTAINS
     REAL, DIMENSION(KMS:KME) :: thl,sqv,sqc,sqw,&
          &El, Dfm, Dfh, Dfq, Tcd, Qcd, Pdk, Pdt, Pdq, Pdc, Vt, Vq
 
+    REAL, DIMENSION(KTS:KTE) :: dz1
+
     REAL, DIMENSION(IMS:IME,KMS:KME,JMS:JME) :: K_q
 
     REAL, DIMENSION(KMS:KME+1) :: zw
     
-    REAL :: cpm,sqcg,flt,flq,pmz,phh,exnerg,zet
+    REAL :: cpm,sqcg,flt,flq,pmz,phh,exnerg,zet,afk,abk
     
     REAL, DIMENSION(KMS:KME) :: thetav
 
@@ -2264,6 +2267,7 @@ CONTAINS
        DO j=JTS,JTF
           DO i=ITS,ITF
              DO k=KTS,KTF
+                dz1(k)=dz(i,k,j)
                 sqv(k)=qv(i,k,j)/(1.+qv(i,k,j))
                 thl(k)=th(i,k,j)
                 thetav(k)=th(i,k,j)*(1.+0.61*sqv(k))
@@ -2452,6 +2456,18 @@ CONTAINS
           ENDIF
 !JOE-end
 
+          !JOE-add tke_pbl for coupling w/shallow-cu schemes (TKE_PBL = QKE/2.)
+          !    TKE_PBL is defined on interfaces, while QKE is at middle of
+          !    layer.
+          !JAYMES-tke_pbl diagnostic not part of original v3.4 code, but added
+          !24 Oct 2017 to support cross-version comparisons 
+          tke_pbl(i,kts,j) = 0.5*MAX(qke(i,kts,j),1.0e-10)
+          DO k = kts+1,kte
+             afk = dz1(k)/( dz1(k)+dz1(k-1) )
+             abk = 1.0 -afk
+             tke_pbl(i,k,j) = 0.5*MAX(qke(i,k,j)*abk+qke(i,k-1,j)*afk,1.0e-3)
+          ENDDO
+
        ENDDO
     ENDDO
 
@@ -2467,6 +2483,7 @@ CONTAINS
   SUBROUTINE mynn_bl_init_driver(&
        &Du,Dv,Dth,&
        &Dqv,Dqc&
+       &,TKE_PBL&
        &,RESTART,ALLOWED_TO_READ,LEVEL&
        &,IDS,IDE,JDS,JDE,KDS,KDE                    &
        &,IMS,IME,JMS,JME,KMS,KME                    &
@@ -2484,6 +2501,9 @@ CONTAINS
     REAL,DIMENSION(IMS:IME,KMS:KME,JMS:JME),INTENT(OUT) :: &
          &Du,Dv,Dth,Dqv,Dqc
 
+    REAL,DIMENSION(IMS:IME,KMS:KME,JMS:JME),INTENT(INOUT) :: &
+         &TKE_PBL
+
     INTEGER :: I,J,K,ITF,JTF,KTF
     
     JTF=MIN0(JTE,JDE-1)
@@ -2499,6 +2519,7 @@ CONTAINS
                 Dth(i,k,j)=0.
                 Dqv(i,k,j)=0.
                 Dqc(i,k,j)=0.
+                TKE_PBL(i,k,j)=0.
              ENDDO
           ENDDO
        ENDDO

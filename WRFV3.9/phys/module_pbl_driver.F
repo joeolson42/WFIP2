@@ -1886,7 +1886,7 @@ CONTAINS
                    &xland=xland,ts=tsk,qsfc=qsfc,qcg=qcg,ps=psfc,      &
                    &ust=ust,ch=ch,hfx=hfx,qfx=qfx,rmol=rmol,wspd=wspd, &
                    &vdfg=vdfg,                                         &
-                   &Qke=qke,                                           &
+                   &Qke=qke,TKE_PBL=tke_pbl,                           &
                    &qke_adv=qke_adv,bl_mynn_tkeadvect=bl_mynn_tkeadvect,&
                    &Tsq=tsq,Qsq=qsq,Cov=cov,                           &
                    &Du=rublten,Dv=rvblten,Dth=rthblten,                &
