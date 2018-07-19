@@ -232,6 +232,8 @@ module_sf_mynn_v34.o: module_sf_sfclay.o module_bl_mynn_v34.o \
                 ../share/module_model_constants.o \
                 ../frame/module_wrf_error.o
 
+module_sf_3Dflux.o: ../share/module_model_constants.o
+
 module_sf_fogdes.o: ../share/module_model_constants.o \
                 module_bl_mynn.o
 
@@ -724,6 +726,7 @@ module_surface_driver.o: \
 		module_sf_mynn.o                \
                 module_sf_mynn_v36.o            \
                 module_sf_mynn_v34.o            \
+                module_sf_3Dflux.o              \
 		module_sf_fogdes.o              \
 		module_sf_sfcdiags.o		\
 		module_sf_sfcdiags_ruclsm.o     \

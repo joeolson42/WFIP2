@@ -91,6 +91,7 @@ CONTAINS
 #if (EM_CORE==1)
  !    &          ,lakemask,  lakeflag                                  & !lake
      &          ,lakemask                                  & !lake
+     &          ,usfc,vsfc                                 & !3Dfluxes
 #endif
             !  cyl ocean variable
                 ,OM_TMP,OM_S,OM_U,OM_V,OM_DEPTH,OM_ML,OM_LON          &
@@ -296,7 +297,8 @@ CONTAINS
                                        ,MYNNSFCSCHEMEV36          &
                                        ,MYNNSFCSCHEMEV34          &
                                        ,OMLSCHEME                 &
-                                       ,PWP3DSCHEME
+                                       ,PWP3DSCHEME               &
+                                       ,SFC3DSCHEME
 #else
    USE module_state_description, ONLY : SFCLAYSCHEME              &
                                        ,SFCLAYREVSCHEME           &
@@ -313,7 +315,7 @@ CONTAINS
                                        ,TEMFSFCSCHEME             &
                                        ,GFDLSFCSCHEME             &
                                        ,SSIBSCHEME                & ! ssib
-                                       ,GFDLSLAB 
+                                       ,GFDLSLAB
 
 
 #endif
@@ -343,6 +345,7 @@ CONTAINS
    USE module_sf_mynn
    USE module_sf_mynn_v36
    USE module_sf_mynn_v34
+   USE module_sf_3Dflux
    USE module_sf_fogdes    ! Katata - fog deposition module
    USE module_sf_ocean_driver
    USE module_sf_idealscmsfclay
@@ -947,6 +950,8 @@ CONTAINS
         &OPTIONAL, INTENT(IN   ):: tsq,qsq,cov,Sh3d,el_pbl,qc_bl,cldfra_bl
    INTEGER, OPTIONAL, INTENT(IN)                                :: bl_mynn_cloudpdf, &
                                                                    icloud_bl
+   REAL, DIMENSION( ims:ime , jms:jme ), OPTIONAL, INTENT(INOUT):: usfc,vsfc
+
 #endif
 
 
@@ -2223,6 +2228,16 @@ CONTAINS
                i_start(ij),i_end(ij),j_start(ij),j_end(ij),kts,kte,&
                ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,bl_mynn_cloudpdf)
          ENDIF
+
+!FOR TESTING ONLY
+         CALL EPIFANIO(u=u_phy,v=v_phy,                             &
+                usfc=usfc,vsfc=vsfc,                                &
+               ids=ids,ide=ide, jds=jds,jde=jde, kds=kds,kde=kde,  &
+               ims=ims,ime=ime, jms=jms,jme=jme, kms=kms,kme=kme,  &
+               its=i_start(ij),ite=i_end(ij),                      &
+               jts=j_start(ij),jte=j_end(ij), kts=kts,kte=kte ) 
+
+
        ELSE
           CALL wrf_error_fatal('Lacking arguments for SFCLAY_mynn in surface driver')
  
@@ -2277,6 +2292,26 @@ CONTAINS
        ELSE
           CALL wrf_error_fatal('Lacking args for SFCLAY_mynnV34 in surf driver')
        ENDIF
+
+     CASE (SFC3DSCHEME)
+         CALL wrf_debug( 100, 'in 3DSFCLAY scheme' )
+
+         CALL EPIFANIO(u=u_phy,v=v_phy,                             &
+                usfc=usfc,vsfc=vsfc,                                &
+!th3d=th_phy,    &
+!               qv3d=qv_curr,p3d=p_phy,pi3d=pi_phy,rho=rho,z=z,ht=ht, &
+!               CP=cp,G=g,ROVCP=rovcp,R=r_d,XLV=xlv,psfc=psfc,chs=chs,&
+!               chs2=chs2,cqs2=cqs2,CPM=cpm,znt=znt,ust=ust,        &
+!               MAVAIL=mavail,XLAND=xland,HFX=hfx,QFX=qfx,LH=lh,   &
+!               TSK=tsk,FLHC=flhc,FLQC=flqc,QGH=qgh,qsfc=qsfc,      &
+!               U10=u10,V10=v10,TH2=th2,T2=t2,Q2=q2,                &
+!               SVP1=svp1,SVP2=svp2,SVP3=svp3,SVPT0=svpt0,EP1=ep_1, &
+!               EP2=ep_2,KARMAN=karman,fCor=fCor,te_temf=te_temf,   &
+!               hd_temf=hd_temf,exch_temf=exch_temf,wm_temf=wm_temf,&
+               ids=ids,ide=ide, jds=jds,jde=jde, kds=kds,kde=kde,  &
+               ims=ims,ime=ime, jms=jms,jme=jme, kms=kms,kme=kme,  &
+               its=i_start(ij),ite=i_end(ij),                      &
+               jts=j_start(ij),jte=j_end(ij), kts=kts,kte=kte )
 
 #endif
 

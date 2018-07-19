@@ -52,7 +52,7 @@ CONTAINS
 #ifdef DM_PARALLEL
     USE module_dm, ONLY : local_communicator, mytask, ntasks, ntasks_x, ntasks_y, local_communicator_periodic, wrf_dm_maxval
     USE module_comm_dm, ONLY : halo_em_phys_a_sub,halo_em_fdda_sfc_sub,halo_pwp_sub,halo_em_chem_e_3_sub, &
-    halo_em_chem_e_5_sub, halo_em_hydro_noahmp_sub
+    halo_em_chem_e_5_sub, halo_em_hydro_noahmp_sub, halo_em_3dsfc_sub
 #endif
     USE module_utility
     IMPLICIT NONE
@@ -419,6 +419,7 @@ BENCH_START(surf_driver_tim)
 
 #ifdef DM_PARALLEL
 #     include "HALO_PWP.inc"
+#     include "HALO_EM_3DSFC.inc"
 #endif
 
       CALL wrf_debug ( 200 , ' call surface_driver' )
@@ -489,6 +490,7 @@ BENCH_START(surf_driver_tim)
      &        ,UDRUNOFF=grid%udrunoff  ,UST=grid%ust       ,UZ0=grid%uz0            &
      &        ,U_FRAME=grid%u_frame    ,U_PHY=grid%u_phy   ,V10=grid%v10            &
      &        ,UOCE=grid%uoce          ,VOCE=grid%voce                              &
+     &        ,USFC=grid%usfc          ,VSFC=grid%vsfc                              &
      &        ,VEGFRA=grid%vegfra      ,VZ0=grid%vz0       ,V_FRAME=grid%v_frame    &
      &        ,V_PHY=grid%v_phy        ,WARM_RAIN=grid%warm_rain                    &
      &        ,WSPD=wspd               ,XICE=grid%xice     ,XLAND=grid%xland        &

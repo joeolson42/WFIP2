@@ -145,6 +145,7 @@ MODULES = \
 	module_sf_mynn.o \
         module_sf_mynn_v36.o \
         module_sf_mynn_v34.o \
+        module_sf_3Dflux.o \
 	module_sf_fogdes.o \
 	module_sf_pxsfclay.o \
 	module_sf_temfsfclay.o \
